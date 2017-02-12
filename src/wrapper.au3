@@ -50,7 +50,15 @@ Func ProcessTitle($title)
 
    _LogProgress('Creating CIA ...')
    DirCreate("cia")
-   _RunWait("tools\makerom -f cia -target t -rsf ""template\custom.rsf"" -o ""cia\" & $title & ".cia"" -exefslogo -icon ""output\" & $title & "\icon.bin"" -banner ""output\" & $title & "\banner.bin"" -elf ""template\" & $emuelf & """ -DAPP_TITLE=""" & $title & """ -DAPP_PRODUCT_CODE=""" & $serial & """ -DAPP_UNIQUE_ID=""0x" & $id & """ -DAPP_ROMFS=""output\" & $title & "\romfs""")
+   _RunWait("tools\makerom -f cia -target t -rsf ""template\custom.rsf"" " _
+	  & "-o ""cia\" & $title & ".cia"" -exefslogo " _
+	  & "-icon ""output\" & $title & "\icon.bin"" " _
+	  & "-banner ""output\" & $title & "\banner.bin"" " _
+	  & "-elf ""template\" & $optEmulator & """ " _
+	  & "-DAPP_TITLE=""" & $title & """ " _
+	  & "-DAPP_PRODUCT_CODE=""" & $serial & """ " _
+	  & "-DAPP_UNIQUE_ID=""0x" & $id & """ " _
+	  & "-DAPP_ROMFS=""output\" & $title & "\romfs""")
 
    FileDelete("output\" & $title & "\romfs\*")
    DirRemove("output\" & $title & "\romfs")
