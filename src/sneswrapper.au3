@@ -1,5 +1,5 @@
 
-#include "tools.au3"
+#include "functions.au3"
 #include "wrapper.au3"
 
 If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then

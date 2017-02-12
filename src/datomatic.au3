@@ -3,8 +3,8 @@
 #include <String.au3>
 #include <Math.au3>
 #include <File.au3>
-#include "LibCsv2.au3"
-#include "tools.au3"
+#include "lib/LibCsv2.au3"
+#include "functions.au3"
 
 Global $oHTTP, $cookie
 $oHTTP = ObjCreate("winhttp.winhttprequest.5.1")

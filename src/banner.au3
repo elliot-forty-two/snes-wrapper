@@ -3,7 +3,7 @@
 #include <FileConstants.au3>
 #include <Array.au3>
 #include <File.au3>
-#include "tools.au3"
+#include "functions.au3"
 
 #include-once
 

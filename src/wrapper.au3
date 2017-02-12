@@ -2,7 +2,7 @@
 #include <Array.au3>
 #include <File.au3>
 #include "banner.au3"
-#include "tools.au3"
+#include "functions.au3"
 
 #include-once
 
