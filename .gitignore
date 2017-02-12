@@ -2,6 +2,7 @@ cia
 data
 input
 output
+build
 
 # Windows image file caches
 Thumbs.db
