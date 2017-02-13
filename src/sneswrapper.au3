@@ -1,17 +1,14 @@
 
+#include <File.au3>
 #include "lib/GetOpt.au3"
 #include "functions.au3"
 #include "wrapper.au3"
 
-Global $optClear = False
-Global $optEmulator = "snes9x_3ds.elf"
-Global $optFolder = @WorkingDir
-
 If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then
    ConsoleWrite("OldSNES -- SNES VC for Old 3DS users" & @CRLF)
    _ParseOpts()
-   $titles = _FileListToArray('input', '*', $FLTA_FOLDERS)
-   If $titles Then
+   $titles = _FileListToArray(_GetInput(), '*', $FLTA_FOLDERS)
+   If @error == 0 Then
 	  For $t = 1 To $titles[0]
 		 $title = $titles[$t]
 		 ConsoleWrite($t & " of " & $titles[0] & ": " & $title & @CRLF)
@@ -53,7 +50,7 @@ Func _ParseOpts()
 	  While 1
 		 $sOper = _GetOpt_Oper()
 		 If Not $sOper Then ExitLoop
-		 $optFolder = $sOper
+		 $optFolder = _PathFull($sOper)
 	  WEnd
    EndIf
 EndFunc

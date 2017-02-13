@@ -7,6 +7,7 @@
 #include-once
 
 Func ProcessTitle($title)
+
    ;; Read ROM info
    Local $long = _InfoGet($title, 'long')
    Local $author = _InfoGet($title, 'author')
@@ -15,15 +16,15 @@ Func ProcessTitle($title)
    Local $release = _InfoGet($title, 'release')
 
    Local $file
-   $files = _FileListToArray("input\" & $title, "*.s?c", $FLTA_FILES)
+   $files = _FileListToArray(_GetInput($title), '*.s?c', $FLTA_FILES)
    For $i = 1 To $files[0]
 	  $ext = StringRight($files[$i], 3)
-	  If $ext == "smc" Or $ext == "sfc" Then
+	  If $ext == 'smc' Or $ext == 'sfc' Then
 		 $file = $files[$i]
 	  EndIf
    Next
-   If Not FileExists("input\" & $title & "\" & $file) Then
-	  _Error("ERROR: Missing rom file. Make sure you have a rom file in input\" & $title & "\")
+   If Not FileExists(_GetInput($title) & $file) Then
+	  _Error('ERROR: Missing rom file. Make sure you have a rom file in ' & _GetInput($title))
 	  SetError(-1)
 	  Return
    EndIf
@@ -31,7 +32,7 @@ Func ProcessTitle($title)
    _CreateRomfs($title)
 
    _LogProgress('Creating icon.bin ...')
-   If Not FileExists('output\' & $title & '\icon.bin') Then
+   If Not FileExists(_GetOutput($title) & 'icon.bin') Then
 	  _CreateIcon($title, $long, $author)
 	  If @error <> 0 Then
 		 SetError(-1)
@@ -40,7 +41,7 @@ Func ProcessTitle($title)
    EndIf
 
    _LogProgress('Creating banner.bin ...')
-   If Not FileExists('output\' & $title & '\banner.bin') Then
+   If Not FileExists(_GetOutput($title) & 'banner.bin') Then
 	  _GenerateBanner($title)
 	  If @error <> 0 Then
 		 SetError(-1)
@@ -49,48 +50,50 @@ Func ProcessTitle($title)
    EndIf
 
    _LogProgress('Creating CIA ...')
-   DirCreate("cia")
-   _RunWait("tools\makerom -f cia -target t -rsf ""template\custom.rsf"" " _
-	  & "-o ""cia\" & $title & ".cia"" -exefslogo " _
-	  & "-icon ""output\" & $title & "\icon.bin"" " _
-	  & "-banner ""output\" & $title & "\banner.bin"" " _
-	  & "-elf ""template\" & $optEmulator & """ " _
-	  & "-DAPP_TITLE=""" & $title & """ " _
-	  & "-DAPP_PRODUCT_CODE=""" & $serial & """ " _
-	  & "-DAPP_UNIQUE_ID=""0x" & $id & """ " _
-	  & "-DAPP_ROMFS=""output\" & $title & "\romfs""")
+   DirCreate('cia')
+   _RunWait('tools\makerom -f cia -target t -rsf "template\custom.rsf" ' _
+	  & '-o "cia\' & $title & '.cia" -exefslogo ' _
+	  & '-icon "' & _GetOutput($title) & 'icon.bin" ' _
+	  & '-banner "' & _GetOutput($title) & 'banner.bin" ' _
+	  & '-elf "template\' & $optEmulator & '" ' _
+	  & '-DAPP_TITLE="' & $title & '" ' _
+	  & '-DAPP_PRODUCT_CODE="' & $serial & '" ' _
+	  & '-DAPP_UNIQUE_ID="0x' & $id & '" ' _
+	  & '-DAPP_ROMFS="output\' & $title & '\romfs"')
 
-   FileDelete("output\" & $title & "\romfs\*")
-   DirRemove("output\" & $title & "\romfs")
+   FileDelete(_GetOutput($title) & 'romfs\*')
+   DirRemove(_GetOutput($title) & 'romfs')
+
+   _LogProgress('Done')
 EndFunc
 
 Func _CreateRomfs($title)
-   DirCreate("output\" & $title & "\romfs")
+   DirCreate(_GetOutput($title) & "romfs")
 
-   FileCopy("input\" & $title & "\*.smc", "output\" & $title & "\romfs\rom.smc")
-   FileCopy("input\" & $title & "\*.sfc", "output\" & $title & "\romfs\rom.smc")
+   FileCopy(_GetInput($title) & "*.smc", _GetOutput($title) & "romfs\rom.smc")
+   FileCopy(_GetInput($title) & "*.sfc", _GetOutput($title) & "romfs\rom.smc")
 
    ;; snes9x
-   FileCopy("input\" & $title & "\*.cfg", "output\" & $title & "\romfs\rom.cfg")
+   FileCopy(_GetInput($title) & "\*.cfg", _GetOutput($title) & "romfs\rom.cfg")
    ;; blargsnes
-   FileCopy("input\" & $title & "\*.bmp", "output\" & $title & "\romfs\blargSnesBorder.bmp")
-   FileCopy("input\" & $title & "\*.ini", "output\" & $title & "\romfs\blargSnes.ini")
+   FileCopy(_GetInput($title) & "\*.bmp", _GetOutput($title) & "romfs\blargSnesBorder.bmp")
+   FileCopy(_GetInput($title) & "\*.ini", _GetOutput($title) & "romfs\blargSnes.ini")
 
-   FileWrite("output\" & $title & "\romfs\rom.txt", $title)
+   FileWrite(_GetOutput($title) & "romfs\rom.txt", $title)
 EndFunc
 
 Func _CreateIcon($title, $long, $author)
-   Local $file = _FileExistsArr("icon.png|icon.jpg|icon.jpeg|banner.png|banner.jpg|banner.jpeg", "input\" & $title)
+   Local $file = _FileExistsArr('icon.png|icon.jpg|icon.jpeg|banner.png|banner.jpg|banner.jpeg', _GetInput($title))
    If Not $file Then
-	  _Error("ERROR: Icon image not found")
+	  _Error('ERROR: Icon image not found')
 	  SetError(-1)
 	  Return
    EndIf
 
-   _RunWait("tools\convert """ & $file & """ -resize 40x40! ""output\" & $title & "\temp.png""")
-   _RunWait("tools\convert template\icon.png ""output\" & $title & "\temp.png"" -gravity center -composite ""output\" & $title & "\icon.png""")
-   _RunWait("tools\bannertool makesmdh -s """ & $title & """ -l """ & $long & """ -p """ & $author & """ -i ""output\" & $title & "\icon.png"" -o ""output\" & $title & "\icon.bin""")
+   _RunWait('tools\convert "' & $file & '" -resize 40x40! "' & _GetOutput($title) & 'temp.png"')
+   _RunWait('tools\convert template\icon.png "' & _GetOutput($title) & 'temp.png" -gravity center -composite "' & _GetOutput($title) & 'icon.png"')
+   _RunWait('tools\bannertool makesmdh -s "' & $title & '" -l "' & $long & '" -p "' & $author & '" -i "' & _GetOutput($title) & 'icon.png" -o "' & _GetOutput($title) & 'icon.bin"')
 
-   FileDelete("output\" & $title & "\temp.png")
+   FileDelete(_GetOutput($title) & "temp.png")
 EndFunc
 

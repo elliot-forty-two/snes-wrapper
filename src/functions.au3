@@ -1,6 +1,34 @@
 
 #include-once
 
+Global $optClear = False
+Global $optEmulator = "snes9x_3ds.elf"
+Global $optFolder = @WorkingDir
+
+Func _GetInput($title = '')
+   Local $ret = ''
+   If StringLen($optFolder) > 0 Then
+	  $ret &= $optFolder & '\'
+   EndIf
+   $ret &= 'input\'
+   If StringLen($title) > 0 Then
+	  $ret &= $title & '\'
+   EndIf
+   Return $ret
+EndFunc
+
+Func _GetOutput($title = '')
+   Local $ret = ''
+   If StringLen($optFolder) > 0 Then
+	  $ret &= $optFolder & '\'
+   EndIf
+   $ret &= 'output\'
+   If StringLen($title) > 0 Then
+	  $ret &= $title & '\'
+   EndIf
+   Return $ret
+EndFunc
+
 Func _LogProgress($msg)
    ConsoleWrite('                                ')
    ConsoleWrite(@CR)
@@ -27,7 +55,7 @@ Func _RunWait($program, $workingdir = @Workingdir, $show_flag = @SW_HIDE, $opt_f
 EndFunc
 
 Func _InfoGet($title, $key)
-   Local $sInfo = FileRead("input\" & $title & "\info.txt")
+   Local $sInfo = FileRead(_GetInput($title) & 'info.txt')
    Local $arr = StringRegExp($sInfo, $key & '=(.*)', 1)
    If UBound($arr) == 1 Then
 	  Return $arr[0]
@@ -35,14 +63,14 @@ Func _InfoGet($title, $key)
    Return ""
 EndFunc
 
-Func _FileExistsArr($files, $dir = "")
+Func _FileExistsArr($files, $dir = '')
    If Not IsArray($files) Then
-	  $files = StringSplit($files, "|")
+	  $files = StringSplit($files, '|')
    EndIf
    For $i = 1 to $files[0]
 	  Local $file = $files[$i]
-	  If FileExists($dir & "/" & $file) Then
-		 Return $dir & "/" & $file
+	  If FileExists($dir & '/' & $file) Then
+		 Return $dir & '/' & $file
 	  EndIf
    Next
    Return Null
