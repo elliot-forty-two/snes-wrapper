@@ -3,6 +3,7 @@ data
 input
 output
 build
+game-data
 
 # Windows image file caches
 Thumbs.db

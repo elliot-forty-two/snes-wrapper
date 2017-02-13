@@ -3,7 +3,11 @@
 #include <String.au3>
 #include <Math.au3>
 #include <File.au3>
+#include 'lib/Json.au3'
+#include 'lib/Curl.au3'
+#include 'lib/Request.au3'
 #include 'lib/LibCsv2.au3'
+#include 'lib/_XMLDomWrapper.au3'
 #include 'functions.au3'
 
 If @ScriptName == 'datomatic.au3' Or @ScriptName == 'datomatic.exe' Then
@@ -23,9 +27,17 @@ EndIf
 
 Func GetSerial($crc32, $region = 'USA')
    Local $serial = $crc32
-   If FileExists('data\datomatic.txt') Then
-	  Local $csv = _CSVReadFile('data\datomatic.txt')
-	  Local $i, $j
+   Local $dataDir = 'game-data\'
+   DirCreate($dataDir)
+
+   Local $datomaticCsv = $dataDir & 'datomatic.csv'
+   If Not FileExists($datomaticCsv) Then
+	  Local $data = Request('https://github.com/elliot-forty-two/game-data/raw/master/snes/datomatic.csv')
+	  FileWrite($datomaticCsv, $data)
+   EndIf
+
+   If FileExists($datomaticCsv) Then
+	  Local $csv = _CSVReadFile($datomaticCsv)
 	  For $i=1 To UBound($csv) - 1
 		 If $crc32 == $csv[$i][6] Then
 			$serial = $csv[$i][1]
@@ -39,45 +51,12 @@ Func GetSerial($crc32, $region = 'USA')
 EndFunc
 
 Func CleanROMs()
-   ConsoleWrite('CleanROMs' & @CRLF)
+   ConsoleWrite('Clean ROMs' & @CRLF)
    _RunWait('tools\nsrt.exe -savetype uncompressed -remhead -rename -lowext -noext "*"', $targetDir)
 EndFunc
 
-Func _XmlFileLoad($strFile)
-	$oXml = ObjCreate('Msxml2.DOMDocument.3.0')
-	$oXml.async = 0
-	$oXml.load($strFile)
-	If $oXml.parseError.errorCode <> 0 Then
-		_Error('Error opening specified file: ' & $strFile & ': ' & $oXml.parseError.reason)
-		SetError($oXml.parseError.errorCode)
-		Return 0
-	EndIf
-	Return $oXml
-EndFunc
-
-Func GetReleaseDate($file, $workingdir = $targetDir)
-   $oOXml = _XmlFileLoad($workingdir & '\gamelist.xml')
-   $oXmlroot = $oOXml.documentElement
-   $objElement = $oXmlroot.getElementsByTagName('game')
-   For $oXmlNode In $objElement
-	  $match = False
-	  For $oXmlNodeD In $oXmlNode.childNodes
-		 Select
-		 Case $oXmlnodeD.nodename = 'path'
-			If StringCompare($file, StringTrimLeft($oXmlnodeD.text, 2)) == 0 Then
-			   $match = True
-			EndIf
-		 Case $oXmlnodeD.nodename = 'releasedate'
-			If $match Then
-			   Return StringLeft($oXmlnodeD.text, 4)
-			EndIf
-		 EndSelect
-	  Next
-   Next
-EndFunc
-
 Func ImportROMs()
-   ConsoleWrite('ImportROMs' & @CRLF)
+   ConsoleWrite('Import ROMs' & @CRLF)
 
    Local $file
    $files = _FileListToArray($targetDir, '*.s?c', $FLTA_FILES)
@@ -108,23 +87,73 @@ Func ImportROMs()
    Next
 EndFunc
 
-Func ImportROM($title)
-   $destdir = $targetDir & '\' & $title & '\'
-
+Func GetExtras($title, $crc32, $sha1)
    ConsoleWrite('GetExtras' & @CRLF)
-   _RunWait('tools\scraper.exe -console_img l,a,b -image_dir label', $destdir)
-   _RunWait('tools\scraper.exe -console_img b -image_dir box', $destdir)
 
+   Local $destdir = $targetDir & '\' & $title & '\'
+   DirCreate($destdir)
+   Local $dataDir = 'game-data\'
+   DirCreate($dataDir)
+
+   Local $hashesCsv = $dataDir & 'thegamesdb-hashes.csv'
+   If Not FileExists($hashesCsv) Then
+	  Local $data = Request('https://github.com/elliot-forty-two/game-data/raw/master/snes/thegamesdb-hashes.csv')
+	  FileWrite($hashesCsv, $data)
+   EndIf
+   Local $csv = _CSVReadFile($hashesCsv)
+   Local $gameId
+   For $i=1 To UBound($csv) - 1
+	  If $sha1 == $csv[$i][0] Then
+		 $gameId =  $csv[$i][1]
+	  EndIf
+   Next
+   Local $xmlData = Request('http://thegamesdb.net/api/GetGame.php?id=' & $gameId)
+   FileDelete($destdir & 'info.xml')
+   FileWrite($destdir & 'info.xml', $xmlData)
+
+   Local $xmlFile = _XMLFileOpen($destdir & 'info.xml')
+
+   Local $release
+   Local $nodes = _XMLGetValue('//ReleaseDate')
+   For $i = 1 To $nodes[0]
+	  $release = StringRight($nodes[$i], 4)
+   Next
+
+   Local $baseImgUrl, $logoSrc
+   Local $nodes = _XMLGetValue('//baseImgUrl')
+   For $i = 1 To $nodes[0]
+	  $baseImgUrl = $nodes[$i]
+   Next
+   Local $nodes = _XMLGetValue('//clearlogo')
+   For $i = 1 To $nodes[0]
+	  $logoSrc = $nodes[$i]
+   Next
+   Local $logoData = Request($baseImgUrl & $logoSrc)
+   FileDelete($destdir & 'label.png')
+   FileWrite($destdir & 'label.png', $logoData)
+
+   Local $snapData = Request('https://raw.githubusercontent.com/elliot-forty-two/game-data/master/snes/snap/' & $crc32 & '.png')
+   FileDelete($destdir & 'banner.png')
+   FileWrite($destdir & 'banner.png', $snapData)
+
+   Local $titleData = Request('https://raw.githubusercontent.com/elliot-forty-two/game-data/master/snes/title/' & $crc32 & '.png')
+   FileDelete($destdir & 'icon.png')
+   FileWrite($destdir & 'icon.png', $titleData)
+
+   Return $release
+EndFunc
+
+Func ImportROM($title)
+   Local $destdir = $targetDir & '\' & $title & '\'
    Local $data = _RunWait('tools\nsrt.exe -hashes -infocsv "*.s?c"', $destdir)
    Local $csv = _CSVRead($data)
-   Local $i, $j
    For $i=1 To UBound($csv) - 1
 	  $file =  $csv[$i][0]
 	  $company =  $csv[$i][2]
 	  $region =  $csv[$i][9]
 	  $code =  StringStripWS($csv[$i][14], $STR_STRIPLEADING + $STR_STRIPTRAILING)
 	  $crc32 =  $csv[$i][15]
-	  $sha1 =  $csv[$i][18]
+	  $sha1 =  StringLower($csv[$i][18])
 
 	  $name =  $csv[$i][23]
 	  If $name == 'Not found in Database' Then
@@ -142,23 +171,11 @@ Func ImportROM($title)
 		 ConsoleWrite('*** Media serial not found: ' & $name & @CRLF)
 	  EndIf
 
+	  ;;
 	  FileDelete($destdir & 'label.*')
 	  FileDelete($destdir & 'banner.*')
 	  FileDelete($destdir & 'icon.*')
-
-	  ;; Copy images
-	  $basename = StringTrimRight($file, 4)
-	  FileCopy($destdir & '\label\' & $basename & '-image.jpg', $destdir & 'label.jpg', $FC_OVERWRITE)
-	  if FileExists('data\snes\title\' & $crc32 & '.png') Then
-		 FileCopy('data\snes\title\' & $crc32 & '.png', $destdir & 'banner.png', $FC_OVERWRITE)
-		 FileCopy('data\snes\title\' & $crc32 & '.png', $destdir & 'icon.png', $FC_OVERWRITE)
-	  Else
-		 FileCopy($destdir & '\box\' & $basename & '-image.jpg', $destdir & 'banner.jpg', $FC_OVERWRITE)
-		 FileCopy($destdir & '\box\' & $basename & '-image.jpg', $destdir & 'icon.jpg', $FC_OVERWRITE)
-	  EndIf
-
-	  ;; Parse gamelist.xml
-	  $release = GetReleaseDate($file, $destdir)
+	  $release = GetExtras($title, $crc32, $sha1)
 
 	  ;; Write info.txt
 	  $info = $destdir & 'info.txt'

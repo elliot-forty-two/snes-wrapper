@@ -70,7 +70,7 @@ Global Const $NODE_NOTATION = 12
 Global $strFile
 Global $oXMLMyError ;COM error handler OBJ ; Initialize SvenP 's error handler
 Global $sXML_error
-Global $fDEBUGGING = 1
+Global $fDEBUGGING = 0
 Global $DOMVERSION = -1
 Global $objDoc
 Global $fXMLAUTOSAVE = True ;auto save updates
