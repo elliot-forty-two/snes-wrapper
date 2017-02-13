@@ -5,7 +5,7 @@
 #include 'wrapper.au3'
 
 If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then
-   ConsoleWrite("OldSNES -- SNES VC for Old 3DS users" & @CRLF & @CRLF)
+   ConsoleWrite("SNES Wrapper - SNES VC for Old 3DS" & @CRLF & @CRLF)
    _ParseOpts()
 
    $optFolder = _PathFull($optFolder)

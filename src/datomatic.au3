@@ -96,8 +96,6 @@ Func ImportROMs()
 			$destdir = $targetDir & '\' & $name & '\'
 			DirCreate($destdir)
 			FileMove($targetDir & '\' & $file, $destdir)
-
-
 		 EndIf
 	  Next
    EndIf
