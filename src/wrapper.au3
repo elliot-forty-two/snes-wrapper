@@ -50,9 +50,9 @@ Func ProcessTitle($title)
    EndIf
 
    _LogProgress('Creating CIA ...')
-   DirCreate('cia')
+   DirCreate(_GetOutput('cia'))
    _RunWait('tools\makerom -f cia -target t -rsf "template\custom.rsf" ' _
-	  & '-o "cia\' & $title & '.cia" -exefslogo ' _
+	  & '-o "' & _GetOutput('cia') & $title & '.cia" -exefslogo ' _
 	  & '-icon "' & _GetOutput($title) & 'icon.bin" ' _
 	  & '-banner "' & _GetOutput($title) & 'banner.bin" ' _
 	  & '-elf "template\' & $optEmulator & '" ' _
