@@ -7,7 +7,6 @@
 #include-once
 
 Func ProcessTitle($title)
-
    ;; Read ROM info
    Local $long = _InfoGet($title, 'long')
    Local $author = _InfoGet($title, 'author')
@@ -29,40 +28,45 @@ Func ProcessTitle($title)
 	  Return
    EndIf
 
-   _CreateRomfs($title)
+   Local $cleanCia = False
 
-   _LogProgress('Creating icon.bin ...')
-   If Not FileExists(_GetOutput($title) & 'icon.bin') Then
+   If $optClean Or Not FileExists(_GetOutput($title) & 'icon.bin') Then
+	  _LogProgress('Creating icon.bin ...')
 	  _CreateIcon($title, $long, $author)
 	  If @error <> 0 Then
 		 SetError(-1)
 		 Return
 	  EndIf
+	  $cleanCia = True
    EndIf
 
-   _LogProgress('Creating banner.bin ...')
-   If Not FileExists(_GetOutput($title) & 'banner.bin') Then
+   If $optClean Or Not FileExists(_GetOutput($title) & 'banner.bin') Then
+	  _LogProgress('Creating banner.bin ...')
 	  _GenerateBanner($title)
 	  If @error <> 0 Then
 		 SetError(-1)
 		 Return
 	  EndIf
+	  $cleanCia = True
    EndIf
 
-   _LogProgress('Creating CIA ...')
-   DirCreate(_GetOutput('cia'))
-   _RunWait('tools\makerom -f cia -target t -rsf "template\custom.rsf" ' _
-	  & '-o "' & _GetOutput('cia') & $title & '.cia" -exefslogo ' _
-	  & '-icon "' & _GetOutput($title) & 'icon.bin" ' _
-	  & '-banner "' & _GetOutput($title) & 'banner.bin" ' _
-	  & '-elf "template\' & $optEmulator & '" ' _
-	  & '-DAPP_TITLE="' & $title & '" ' _
-	  & '-DAPP_PRODUCT_CODE="' & $serial & '" ' _
-	  & '-DAPP_UNIQUE_ID="0x' & $id & '" ' _
-	  & '-DAPP_ROMFS="output\' & $title & '\romfs"')
+   If $optClean Or $cleanCia Or Not FileExists(_GetCiaDir() & $title & '.cia') Then
+	  _LogProgress('Creating CIA ...')
+	  DirCreate(_GetCiaDir())
+	  _CreateRomfs($title)
+	  _RunWait('tools\makerom -f cia -target t -rsf "template\custom.rsf" ' _
+		 & '-o "' & _GetCiaDir() & $title & '.cia" -exefslogo ' _
+		 & '-icon "' & _GetOutput($title) & 'icon.bin" ' _
+		 & '-banner "' & _GetOutput($title) & 'banner.bin" ' _
+		 & '-elf "template\' & $optEmulator & '" ' _
+		 & '-DAPP_TITLE="' & $title & '" ' _
+		 & '-DAPP_PRODUCT_CODE="' & $serial & '" ' _
+		 & '-DAPP_UNIQUE_ID="0x' & $id & '" ' _
+		 & '-DAPP_ROMFS="output\' & $title & '\romfs"')
 
-   FileDelete(_GetOutput($title) & 'romfs\*')
-   DirRemove(_GetOutput($title) & 'romfs')
+	  FileDelete(_GetOutput($title) & 'romfs\*')
+	  DirRemove(_GetOutput($title) & 'romfs')
+   EndIf
 
    _LogProgress('Done')
 EndFunc
@@ -97,3 +101,49 @@ Func _CreateIcon($title, $long, $author)
    FileDelete(_GetOutput($title) & "temp.png")
 EndFunc
 
+Func UpdateCIA($cia)
+   _LogProgress('Extracting NCCH ...')
+   _RunWait('tools\ctrtool -x -t cia --contents ncch "' & $cia & '"', _GetCiaDir())
+   $ncchs = _FileListToArray(_GetCiaDir(), 'ncch*.*', $FLTA_FILES)
+   If @error == 0 Then
+	  For $i = 1 To $ncchs[0]
+		 $ncch = $ncchs[$i]
+		 _LogProgress('Extracting exefs ' & $i & ' ...')
+		 _RunWait('tools\ctrtool -x -t ncch --exefsdir exefs --romfsdir romfs "' & $ncch & '"', _GetCiaDir())
+		 FileDelete(_GetCiaDir() & $ncch)
+	  Next
+   EndIf
+
+   _LogProgress('Extracting info ...')
+   _RunWait('tools\ciainfo "' & $cia & '"', _GetCiaDir())
+   $arr = FileReadToArray(_GetCiaDir() & 'info.txt')
+   FileDelete(_GetCiaDir() & 'info.txt')
+   If UBound($arr) <> 5 Then
+	  _Error('ERROR: CIA info returned wrong number of values')
+	  Return
+   EndIf
+   $id = $arr[0]
+   $serial = $arr[1]
+   $title = $arr[2]
+   $long = $arr[3]
+   $author = $arr[4]
+
+   _LogProgress('Creating CIA ...')
+   _RunWait('tools\makerom ' _
+	  & '-f cia -target t ' _
+	  & '-rsf "template\custom.rsf" ' _
+	  & '-o "' & _GetCiaDir() & $cia & '" ' _
+	  & '-exefslogo ' _
+	  & '-icon "' & _GetCiaDir() & 'exefs\icon.bin" ' _
+	  & '-banner "' & _GetCiaDir() & 'exefs\banner.bin" ' _
+	  & '-elf "template\' & $optEmulator & '" ' _
+	  & '-DAPP_TITLE="' & $title & '" ' _
+	  & '-DAPP_PRODUCT_CODE="' & $serial & '" ' _
+	  & '-DAPP_UNIQUE_ID=0x' & $id & ' ' _
+	  & '-DAPP_ROMFS="romfs"')
+
+   FileDelete(_GetCiaDir() & 'exefs\*')
+   DirRemove(_GetCiaDir() & 'exefs')
+
+   _LogProgress('Done')
+EndFunc

@@ -1,9 +1,12 @@
 
 #include-once
 
-Global $optClear = False
+Global $optClean = False
+Global $optUpdate = False
+Global $optVerbose = False
 Global $optEmulator = "snes9x_3ds.elf"
 Global $optFolder = @WorkingDir
+Global $optTargets[1] = [0]
 
 Func _GetInput($title = '')
    Local $ret = ''
@@ -26,6 +29,15 @@ Func _GetOutput($title = '')
    If StringLen($title) > 0 Then
 	  $ret &= $title & '\'
    EndIf
+   Return $ret
+EndFunc
+
+Func _GetCiaDir()
+   Local $ret = ''
+   If StringLen($optFolder) > 0 Then
+	  $ret &= $optFolder & '\'
+   EndIf
+   $ret &= 'cia\'
    Return $ret
 EndFunc
 
