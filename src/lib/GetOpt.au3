@@ -63,10 +63,10 @@
 ; #CONSTANTS# ==================================================================
 Global Const $GETOPT_VERSION = '1.3' ;  String: Version number.
 Global Const $GETOPT_REQUIRED_ARGUMENT = Chr(127) ; String: Value to use for required arguments.
-Global Const Enum $GETOPT_MOD_NONE = 0, $GETOPT_MOD_PLUS, $GETOPT_MOD_MINUS ; Int: Option modifiers.
+Global Enum $GETOPT_MOD_NONE = 0, $GETOPT_MOD_PLUS, $GETOPT_MOD_MINUS ; Int: Option modifiers.
 
 ; Int: @extended error return codes.
-Global Const Enum $E_GETOPT_BAD_FUNCTION_ARGUMENT = 1, _
+Global Enum $E_GETOPT_BAD_FUNCTION_ARGUMENT = 1, _
 		$E_GETOPT_INVALID_OPTIONS, $E_GETOPT_NO_OPTIONS_SET, _
 		$E_GETOPT_NO_COMMAND_LINE, $E_GETOPT_NO_OPTIONS, $E_GETOPT_NO_OPERANDS, _
 		$E_GETOPT_UNKNOWN_OPTION, $E_GETOPT_MISSING_ARGUMENT, _
