@@ -6,7 +6,6 @@ Global $optUpdate = False
 Global $optVerbose = False
 Global $optEmulator = "snes9x_3ds.elf"
 Global $optFolder = @WorkingDir
-Global $optTargets[1] = [0]
 
 Func _GetInput($title = '')
    Local $ret = ''
@@ -59,6 +58,7 @@ Func _RunWait($program, $workingdir = @Workingdir, $show_flag = @SW_HIDE, $opt_f
    Local $sOut = StdoutRead($pid)
    Local $sErr = StderrRead($pid)
    If @extended <> 0 Then
+	  ConsoleWriteError('Return code: ' & @extended & @CRLF)
 	  ConsoleWriteError($sErr)
    Else
 ;~ 	  ConsoleWrite($sOut)

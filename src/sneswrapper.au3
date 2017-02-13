@@ -1,12 +1,19 @@
 
 #include <File.au3>
-#include "lib/GetOpt.au3"
-#include "functions.au3"
-#include "wrapper.au3"
+#include 'lib/GetOpt.au3'
+#include 'functions.au3'
+#include 'wrapper.au3'
 
 If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then
    ConsoleWrite("OldSNES -- SNES VC for Old 3DS users" & @CRLF & @CRLF)
    _ParseOpts()
+
+   $optFolder = _PathFull($optFolder)
+   If Not FileExists($optFolder) Then
+	  _Error('ERROR: Folder not found: ' & $optFolder & @CRLF)
+	  Exit 1
+   EndIf
+   ConsoleWrite('Using folder: ' & $optFolder & @CRLF)
 
    If $optUpdate Then
 	  ConsoleWrite('Updating CIAs' & @CRLF)
@@ -33,18 +40,17 @@ EndIf
 Func _ParseOpts()
    Local $sMsg
    Local $sOpt, $sOper
-   Local $aOpts[6][3] = [ _
+   Local $aOpts[5][3] = [ _
 	  ['-c', '--clean', True], _
 	  ['-u', '--update', True], _
 	  ['-b', '--blarg', True], _
-	  ['-f', '--folder', @WorkingDir], _
 	  ['-v', '--verbose', True], _
 	  ['-h', '--help', True] _
    ]
    _GetOpt_Set($aOpts)
    If 0 < $GetOpt_Opts[0] Then
 	  While 1
-		 $sOpt = _GetOpt('cuf:vbh')
+		 $sOpt = _GetOpt('cuvbh')
 		 If Not $sOpt Then ExitLoop
 		 Switch $sOpt
 		 Case '?'
@@ -55,8 +61,6 @@ Func _ParseOpts()
 			$optClean = $GetOpt_Arg
 		 Case 'u'
 			$optUpdate = $GetOpt_Arg
-		 Case 'f'
-			$optFolder = _PathFull($GetOpt_Arg)
 		 Case 'v'
 			$optVerbose = $GetOpt_Arg
 		 Case 'b'
@@ -72,17 +76,17 @@ Func _ParseOpts()
 	  While 1
 		 $sOper = _GetOpt_Oper()
 		 If Not $sOper Then ExitLoop
-		 $idx = _ArrayAdd($optTargets, $sOper)
+		 $optFolder = $sOper
 	  WEnd
    EndIf
 EndFunc
 
 Func _Help()
-   ConsoleWrite('Usage: sneswrapper.exe [-h] [-c|-u] [-b] [-f=<folder>]' & @CRLF)
+   ConsoleWrite('Usage: sneswrapper.exe [-h] [-c|-u] [-b] [<folder>]' & @CRLF)
+   ConsoleWrite(@TAB & '-h --help' & @TAB & 'Show this help message' & @CRLF)
    ConsoleWrite(@TAB & '-c --clean' & @TAB & 'Recreate output' & @CRLF)
    ConsoleWrite(@TAB & '-u --update' & @TAB & 'Update existing CIAs with new emulator' & @CRLF)
    ConsoleWrite(@TAB & '-b --blarg' & @TAB & 'Inject blargSNES instead of snes9x' & @CRLF)
-   ConsoleWrite(@TAB & '-f --folder' & @TAB & 'Set the working folder where "input" folder resides' & @CRLF)
-   ConsoleWrite(@TAB & '-h --help' & @TAB & 'Show this help message' & @CRLF)
+   ConsoleWrite(@TAB & '<folder>' & @TAB & 'Set the working folder where "input" folder resides' & @CRLF)
    Exit
 EndFunc

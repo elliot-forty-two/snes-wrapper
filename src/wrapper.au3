@@ -53,7 +53,9 @@ Func ProcessTitle($title)
    If $optClean Or $cleanCia Or Not FileExists(_GetCiaDir() & $title & '.cia') Then
 	  _LogProgress('Creating CIA ...')
 	  DirCreate(_GetCiaDir())
+
 	  _CreateRomfs($title)
+
 	  _RunWait('tools\makerom -f cia -target t -rsf "template\custom.rsf" ' _
 		 & '-o "' & _GetCiaDir() & $title & '.cia" -exefslogo ' _
 		 & '-icon "' & _GetOutput($title) & 'icon.bin" ' _
@@ -62,7 +64,7 @@ Func ProcessTitle($title)
 		 & '-DAPP_TITLE="' & $title & '" ' _
 		 & '-DAPP_PRODUCT_CODE="' & $serial & '" ' _
 		 & '-DAPP_UNIQUE_ID="0x' & $id & '" ' _
-		 & '-DAPP_ROMFS="output\' & $title & '\romfs"')
+		 & '-DAPP_ROMFS="' & _GetOutput($title) & 'romfs"')
 
 	  FileDelete(_GetOutput($title) & 'romfs\*')
 	  DirRemove(_GetOutput($title) & 'romfs')
@@ -87,6 +89,8 @@ Func _CreateRomfs($title)
 EndFunc
 
 Func _CreateIcon($title, $long, $author)
+   DirCreate(_GetOutput($title))
+
    Local $file = _FileExistsArr('icon.png|icon.jpg|icon.jpeg|banner.png|banner.jpg|banner.jpeg', _GetInput($title))
    If Not $file Then
 	  _Error('ERROR: Icon image not found')
@@ -140,10 +144,12 @@ Func UpdateCIA($cia)
 	  & '-DAPP_TITLE="' & $title & '" ' _
 	  & '-DAPP_PRODUCT_CODE="' & $serial & '" ' _
 	  & '-DAPP_UNIQUE_ID=0x' & $id & ' ' _
-	  & '-DAPP_ROMFS="romfs"')
+	  & '-DAPP_ROMFS="' & _GetCiaDir() & 'romfs"')
 
    FileDelete(_GetCiaDir() & 'exefs\*')
    DirRemove(_GetCiaDir() & 'exefs')
+   FileDelete(_GetCiaDir() & 'romfs\*')
+   DirRemove(_GetCiaDir() & 'romfs')
 
    _LogProgress('Done')
 EndFunc

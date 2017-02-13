@@ -58,7 +58,6 @@ Func _CSVReadFile( $path, $separator=',' )
 
 	Local $aRawData = StringRegExp( $sRawData, $pattern, 4 )
 	If @error <> 0 Then
-		Die( 'Error: ' & @error )
 		SetError( 3 )
 		Return 0
 	EndIf

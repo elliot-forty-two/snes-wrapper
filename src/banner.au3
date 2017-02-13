@@ -8,10 +8,9 @@
 #include-once
 
 If @ScriptName == 'banner.au3' Or @ScriptName == 'banner.exe' Then
-   $titles = _FileListToArray(_GetInput(), '*', $FLTA_FOLDERS)
-   For $t = 1 To $titles[0]
-	  $title = $titles[$t]
-	  ConsoleWrite($t & ' of ' & $titles[0] & ': ' & $title & @CRLF)
+   For $t = 1 To $CmdLine[0]
+	  $title = $CmdLine[$t]
+	  ConsoleWrite($t & ' of ' & $CmdLine[0] & ': ' & $title & @CRLF)
 	  _GenerateBanner($title)
    Next
 EndIf
