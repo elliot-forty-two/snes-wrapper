@@ -21,13 +21,13 @@ If @ScriptName == 'datomatic.au3' Or @ScriptName == 'datomatic.exe' Then
    ImportROMs()
 EndIf
 
-Func GetSerial($hash, $region = 'USA')
-   Local $serial = $hash
+Func GetSerial($crc32, $region = 'USA')
+   Local $serial = $crc32
    If FileExists('data\datomatic.txt') Then
 	  Local $csv = _CSVReadFile('data\datomatic.txt')
 	  Local $i, $j
 	  For $i=1 To UBound($csv) - 1
-		 If $hash == $csv[$i][6] Then
+		 If $crc32 == $csv[$i][6] Then
 			$serial = $csv[$i][1]
 			If  $region == $csv[$i][2] And Not StringLower($serial) == 'unk' Then
 			   Return $serial
@@ -115,15 +115,18 @@ Func ImportROM($title)
    _RunWait('tools\scraper.exe -console_img l,a,b -image_dir label', $destdir)
    _RunWait('tools\scraper.exe -console_img b -image_dir box', $destdir)
 
-   Local $data = _RunWait('tools\nsrt.exe -infocsv "*.s?c"', $destdir)
+   Local $data = _RunWait('tools\nsrt.exe -hashes -infocsv "*.s?c"', $destdir)
    Local $csv = _CSVRead($data)
    Local $i, $j
    For $i=1 To UBound($csv) - 1
 	  $file =  $csv[$i][0]
 	  $company =  $csv[$i][2]
+	  $region =  $csv[$i][9]
 	  $code =  StringStripWS($csv[$i][14], $STR_STRIPLEADING + $STR_STRIPTRAILING)
-	  $hash =  $csv[$i][15]
-	  $name =  $csv[$i][16]
+	  $crc32 =  $csv[$i][15]
+	  $sha1 =  $csv[$i][18]
+
+	  $name =  $csv[$i][23]
 	  If $name == 'Not found in Database' Then
 		 $name = $title
 	  EndIf
@@ -133,9 +136,9 @@ Func ImportROM($title)
 	  If StringLen($name) > 36 Then
 		 ConsoleWrite('*** Name longer than 36 characters: ' & $name & @CRLF)
 	  EndIf
-	  $region =  $csv[$i][9]
-	  $serial = GetSerial($hash, $region)
-	  If $serial == $hash Then
+
+	  $serial = GetSerial($crc32, $region)
+	  If $serial == $crc32 Then
 		 ConsoleWrite('*** Media serial not found: ' & $name & @CRLF)
 	  EndIf
 
@@ -146,9 +149,9 @@ Func ImportROM($title)
 	  ;; Copy images
 	  $basename = StringTrimRight($file, 4)
 	  FileCopy($destdir & '\label\' & $basename & '-image.jpg', $destdir & 'label.jpg', $FC_OVERWRITE)
-	  if FileExists('data\snes\title\' & $hash & '.png') Then
-		 FileCopy('data\snes\title\' & $hash & '.png', $destdir & 'banner.png', $FC_OVERWRITE)
-		 FileCopy('data\snes\title\' & $hash & '.png', $destdir & 'icon.png', $FC_OVERWRITE)
+	  if FileExists('data\snes\title\' & $crc32 & '.png') Then
+		 FileCopy('data\snes\title\' & $crc32 & '.png', $destdir & 'banner.png', $FC_OVERWRITE)
+		 FileCopy('data\snes\title\' & $crc32 & '.png', $destdir & 'icon.png', $FC_OVERWRITE)
 	  Else
 		 FileCopy($destdir & '\box\' & $basename & '-image.jpg', $destdir & 'banner.jpg', $FC_OVERWRITE)
 		 FileCopy($destdir & '\box\' & $basename & '-image.jpg', $destdir & 'icon.jpg', $FC_OVERWRITE)
@@ -164,7 +167,7 @@ Func ImportROM($title)
 	  FileWriteLine($info,'long=' & $name)
 	  FileWriteLine($info,'author=' & $company)
 	  FileWriteLine($info,'release=' & $release)
-	  FileWriteLine($info,'id=' & $hash)
+	  FileWriteLine($info,'id=' & $crc32)
 	  FileWriteLine($info,'serial=' & $serial)
    Next
 EndFunc

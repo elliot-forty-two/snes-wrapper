@@ -58,8 +58,8 @@ Func _RunWait($program, $workingdir = @Workingdir, $show_flag = @SW_HIDE, $opt_f
    Local $sOut = StdoutRead($pid)
    Local $sErr = StderrRead($pid)
    If @extended <> 0 Then
-	  ConsoleWriteError('Return code: ' & @extended & @CRLF)
-	  ConsoleWriteError($sErr)
+;~ 	  ConsoleWriteError('Return code: ' & @extended & @CRLF)
+;~ 	  ConsoleWriteError($sErr)
    Else
 ;~ 	  ConsoleWrite($sOut)
    EndIf
