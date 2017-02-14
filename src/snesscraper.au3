@@ -10,7 +10,11 @@
 #include 'lib/_XMLDomWrapper.au3'
 #include 'functions.au3'
 
-If @ScriptName == 'datomatic.au3' Or @ScriptName == 'datomatic.exe' Then
+Global $dataDir = 'game-data\'
+Global $datomaticCsv = $dataDir & 'datomatic.csv'
+Global $hashesCsv = $dataDir & 'thegamesdb-hashes.csv'
+
+If @ScriptName == 'snesscraper.au3' Or @ScriptName == 'snesscraper.exe' Then
    Global $targetDir = 'input'
    If $CmdLine[0] == 1 Then
 	  $targetDir = $CmdLine[1]
@@ -21,20 +25,30 @@ If @ScriptName == 'datomatic.au3' Or @ScriptName == 'datomatic.exe' Then
 	  Exit 1
    EndIf
 
-   CleanROMs()
+   UpdateGameData()
+
+   ConsoleWrite('Clean ROMs' & @CRLF)
+   _RunWait('tools\nsrt.exe -savetype uncompressed -remhead -rename -lowext -noext "*"', $targetDir)
+
    ImportROMs()
 EndIf
 
-Func GetSerial($crc32, $region = 'USA')
-   Local $serial = $crc32
-   Local $dataDir = 'game-data\'
+Func UpdateGameData()
    DirCreate($dataDir)
 
-   Local $datomaticCsv = $dataDir & 'datomatic.csv'
    If Not FileExists($datomaticCsv) Then
 	  Local $data = Request('https://github.com/elliot-forty-two/game-data/raw/master/snes/datomatic.csv')
 	  FileWrite($datomaticCsv, $data)
    EndIf
+
+   If Not FileExists($hashesCsv) Then
+	  Local $data = Request('https://github.com/elliot-forty-two/game-data/raw/master/snes/thegamesdb-hashes.csv')
+	  FileWrite($hashesCsv, $data)
+   EndIf
+EndFunc
+
+Func GetSerial($crc32, $region = 'USA')
+   Local $serial = $crc32
 
    If FileExists($datomaticCsv) Then
 	  Local $csv = _CSVReadFile($datomaticCsv)
@@ -48,11 +62,6 @@ Func GetSerial($crc32, $region = 'USA')
 	  Next
    EndIf
    Return $serial
-EndFunc
-
-Func CleanROMs()
-   ConsoleWrite('Clean ROMs' & @CRLF)
-   _RunWait('tools\nsrt.exe -savetype uncompressed -remhead -rename -lowext -noext "*"', $targetDir)
 EndFunc
 
 Func ImportROMs()
@@ -92,14 +101,7 @@ Func GetExtras($title, $crc32, $sha1)
 
    Local $destdir = $targetDir & '\' & $title & '\'
    DirCreate($destdir)
-   Local $dataDir = 'game-data\'
-   DirCreate($dataDir)
 
-   Local $hashesCsv = $dataDir & 'thegamesdb-hashes.csv'
-   If Not FileExists($hashesCsv) Then
-	  Local $data = Request('https://github.com/elliot-forty-two/game-data/raw/master/snes/thegamesdb-hashes.csv')
-	  FileWrite($hashesCsv, $data)
-   EndIf
    Local $csv = _CSVReadFile($hashesCsv)
    Local $gameId
    For $i=1 To UBound($csv) - 1
