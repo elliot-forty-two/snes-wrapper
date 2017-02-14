@@ -176,66 +176,67 @@ EndFunc
 Func GetGameRelease($title, $sha1)
    _LogProgress('Get release year...')
    OpenInfoXml($title, $sha1)
-   Local $release
-   Local $nodes = _XMLGetValue('//ReleaseDate')
-   If @error == 0 Then
-	  $release = StringRight($nodes[1], 4)
-   EndIf
-   Return $release
+   Return _XMLGetFirstValue('//ReleaseDate')
 EndFunc
 
 Func ImportROM($title)
-   Local $data = _RunWait('tools\nsrt.exe -hashes -infocsv "*.s?c"', _GetInput($title))
-
    If $optClean Then
+	  FileDelete(_GetInput($title) & 'rominfo.xml')
 	  FileDelete(_GetInput($title) & 'info.xml')
 	  FileDelete(_GetInput($title) & 'label.*')
 	  FileDelete(_GetInput($title) & 'banner.*')
 	  FileDelete(_GetInput($title) & 'icon.*')
    EndIf
 
-   Local $csv = _CSVRead($data)
-   For $i=1 To UBound($csv) - 1
-	  $file =  $csv[$i][0]
-	  $company =  $csv[$i][2]
-	  $region =  $csv[$i][9]
-	  $code =  StringStripWS($csv[$i][14], $STR_STRIPLEADING + $STR_STRIPTRAILING)
-	  $crc32 =  $csv[$i][15]
-	  $sha1 =  StringLower($csv[$i][18])
+   _FileListToArray(_GetInput($title), 'rominfo.xml', $FLTA_FILES)
+   If @error <> 0 Then
+	  _LogProgress('Generate rominfo.xml...')
+	  Local $xmlData = _RunWait('tools\nsrt.exe -hashes -infoxml "*.s?c"', _GetInput($title))
+	  FileDelete(_GetInput($title) & 'rominfo.xml')
+	  FileWrite(_GetInput($title) & 'rominfo.xml', $xmlData)
+   EndIf
+   _XMLFileOpen(_GetInput($title) & 'rominfo.xml')
 
-	  $name =  $csv[$i][23]
-	  If $name == 'Not found in Database' Then
-		 $name = $title
-	  EndIf
-	  If StringInStr($name, ', The') Then
-		 $name = 'The ' & StringReplace($name, ', The', '')
-	  EndIf
-	  If StringLen($name) > 36 Then
-		 ConsoleWrite('WARNING: Name longer than 36 characters' & @CRLF)
-	  EndIf
+   $file = _XMLGetFirstValue('//File')
+   $company = _XMLGetFirstValue('//Company')
+   $region = _XMLGetFirstValue('//Country')
+   $code =  StringStripWS(_XMLGetFirstValue('//GameCode'), $STR_STRIPLEADING + $STR_STRIPTRAILING)
+   $crc32 = _XMLGetFirstValue('//Section[@type="Hashes"]/CRC32')
+   $sha1 = StringLower(_XMLGetFirstValue('//Section[@type="Hashes"]/SHA-1'))
 
-	  $serial = GetSerial($crc32, $region)
-	  If $serial == $crc32 Then
-		 ConsoleWrite('WARNING: Media serial not found' & @CRLF)
-	  EndIf
+   $name = _XMLGetFirstValue('//Section[@type="Database"]/Name')
+   If $name == 'Not found in Database' Then
+	  $name = $title
+   EndIf
+   If StringInStr($name, ', The') Then
+	  $name = 'The ' & StringReplace($name, ', The', '')
+   EndIf
+   If StringLen($name) > 36 Then
+	  ConsoleWrite('WARNING: Name longer than 36 characters' & @CRLF)
+   EndIf
 
-	  ;; Game images
-	  GetGameImages($title, $crc32, $sha1)
+   $serial = GetSerial($crc32, $region)
+   If $serial == $crc32 Then
+	  ConsoleWrite('WARNING: Media serial not found' & @CRLF)
+   EndIf
 
-	  ;; Release year
-	  $release = GetGameRelease($title, $sha1)
+   ;; Game images
+   GetGameImages($title, $crc32, $sha1)
 
-	  ;; Write info.txt
-	  $info = _GetInput($title) & 'info.txt'
-	  FileDelete($info)
-	  FileWriteLine($info,'title=' & $name)
-	  FileWriteLine($info,'long=' & $name)
-	  FileWriteLine($info,'author=' & $company)
-	  FileWriteLine($info,'release=' & $release)
-	  FileWriteLine($info,'id=' & $crc32)
-	  FileWriteLine($info,'serial=' & $serial)
-   Next
-   _LogProgress('Done')
+   ;; Release year
+   $release = GetGameRelease($title, $sha1)
+
+   ;; Write info.txt
+   $info = _GetInput($title) & 'info.txt'
+   FileDelete($info)
+   FileWriteLine($info,'title=' & $name)
+   FileWriteLine($info,'long=' & $name)
+   FileWriteLine($info,'author=' & $company)
+   FileWriteLine($info,'release=' & $release)
+   FileWriteLine($info,'id=' & $crc32)
+   FileWriteLine($info,'serial=' & $serial)
+
+_LogProgress('Done')
 EndFunc
 
 Func _ParseOpts()

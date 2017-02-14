@@ -87,3 +87,10 @@ Func _FileExistsArr($files, $dir = '')
    Next
    Return Null
 EndFunc
+
+Func _XMLGetFirstValue($xpath)
+   Local $nodes = _XMLGetValue($xpath)
+   If @error == 0 Then
+	  Return $nodes[1]
+   EndIf
+EndFunc
