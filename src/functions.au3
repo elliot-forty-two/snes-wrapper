@@ -1,6 +1,8 @@
 
 #include-once
 
+#include 'lib/_XMLDomWrapper.au3'
+
 Global $optClean = False
 Global $optUpdate = False
 Global $optVerbose = False

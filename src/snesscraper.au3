@@ -176,7 +176,7 @@ EndFunc
 Func GetGameRelease($title, $sha1)
    _LogProgress('Get release year...')
    OpenInfoXml($title, $sha1)
-   Return _XMLGetFirstValue('//ReleaseDate')
+   Return StringRight(_XMLGetFirstValue('//ReleaseDate'), 4)
 EndFunc
 
 Func ImportROM($title)
@@ -211,6 +211,7 @@ Func ImportROM($title)
    If StringInStr($name, ', The') Then
 	  $name = 'The ' & StringReplace($name, ', The', '')
    EndIf
+   $long = $name
    If StringLen($name) > 36 Then
 	  ConsoleWrite('WARNING: Name longer than 36 characters' & @CRLF)
    EndIf
@@ -230,7 +231,7 @@ Func ImportROM($title)
    $info = _GetInput($title) & 'info.txt'
    FileDelete($info)
    FileWriteLine($info,'title=' & $name)
-   FileWriteLine($info,'long=' & $name)
+   FileWriteLine($info,'long=' & $long)
    FileWriteLine($info,'author=' & $company)
    FileWriteLine($info,'release=' & $release)
    FileWriteLine($info,'id=' & $crc32)

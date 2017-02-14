@@ -23,8 +23,11 @@ Func _GenerateBanner($title)
    Local $id = _InfoGet($title, 'id')
    Local $release = _InfoGet($title, 'release')
 
+   Local $vc
    If StringLen($long) <> 0 Then
 	  $vc = $long
+	  $vc = StringReplace($vc, ' - ', ':\n')
+	  $vc = StringReplace($vc, ': ', ':\n')
    EndIf
    If StringLen($release) == 0 Then
 	  ConsoleWrite('WARNING: Missing release' & @CRLF)
@@ -44,7 +47,7 @@ Func _GenerateBanner($title)
 	  Return
    EndIf
 
-   DirCreate( _GetOutput($title))
+   DirCreate(_GetOutput($title))
 
    ;; Process label, ETC1
    _RunWait('tools\convert "' & $fLabel & '" -rotate 270 -resize 23x44! "' & _GetOutput($title) & 'temp.png"')
@@ -70,53 +73,54 @@ Func _GenerateBanner($title)
 
    FileDelete(_GetOutput($title) & 'temp.png')
 
-   ;; Format title text
-   $f=14
-   $k=1
-   $w=6
-   $lt=3
-   $lr=6
-   If StringLen($title) > 14 Then
-	  $f = 13
-	  Local $aParts = StringSplit($vc, ' ')
-	  Local $len = 0
-	  $vc = ''
-	  For $i = 1 To $aParts[0]
-		 $len += StringLen($aParts[$i]) + 1
-		 If $len > 18 Then
-			$lt=1
-			$lr=20
-			$vc &= '\n'
-			$len = 0
-		 EndIf
-		 $vc &= $aParts[$i]
-		 If $i < $aParts[0] Then
-			$vc &= ' '
-		 EndIf
-	  Next
+   ;; VC label
+   Local $fontSetup = ' -font template\SCE-PS3-RD-R-LATIN.TTF' & ' -background #0000' & ' -fill #1e1e1e'
+   Local $vcCaption = ' -gravity center' & ' -kerning 1' & ' -interword-spacing 6' & ' -size 155x' & ' caption:"' & $vc & '"'
+   Local $releaseCaption = ' -gravity center' & ' -kerning 1.5' & ' -interword-spacing 6' & ' -size 155x' & ' caption:"Released: ' & $release & '"'
+
+   ;; Get calculated pointsize
+   Local $point = _RunWait('tools\convert' & $fontSetup & $vcCaption & ' -format "%[caption:pointsize]"' & ' info:')
+   Local $pointSize
+   If $point > 12.75 Then
+	  $pointSize = ' -pointsize 12.75'
    EndIf
 
-   ;; L8A8 greyscale format
+   ;; Get calculated height
+   Local $height = _RunWait('tools\convert' & $fontSetup & $vcCaption & $pointSize & ' -format "%[fx:h]"' & ' info:')
+   If $height > 34 Then
+	  $height = 34
+	  $vcCaption = StringReplace($vcCaption, '155x', '155x34')
+   EndIf
+
+   ;; Calculate offsets
+   Local $vcOffset = 26 - ($height / 2)
+   If ($vcOffset + $height) > 42 Then
+	  $vcOffset = 42 - $height
+   EndIf
+   Local $releaseOffset = 64 - ($vcOffset + $height + 14)
+   If $releaseOffset < 8 Then
+	  $releaseOffset = 8
+   EndIf
+
+   Local $vcCaptionComp = ' -gravity northeast' & ' -geometry +7+' & $vcOffset & ' -compose over' & ' -composite'
+   Local $releaseCaptionComp = ' -gravity southeast' & ' -geometry +7+' & $releaseOffset & ' -compose over' & ' -composite'
+
+   ;; Create composite image
    _RunWait('tools\convert' _
 	  & ' template\USA_EN2.png' _
-	  & ' -gravity center' _
-	  & ' -font template\SCE-PS3-RD-R-LATIN.TTF' _
-	  & ' -pointsize ' & $f _
-	  & ' -kerning ' & $k _
-	  & ' -fill #1e1e1e' _
-	  & ' -interword-spacing ' & $w  _
-	  & ' -interline-spacing ' & $lt  _
-	  & ' -annotate +45+0 "' & $vc & '\n"' _
-	  & ' -pointsize ' & $f _
-	  & ' -kerning 1.5' _
-	  & ' -interword-spacing 6' _
-	  & ' -interline-spacing ' & $lr  _
-	  & ' -annotate +46+0 "\nReleased: ' & $release & '"' _
-	  & ' -flip' _
+	  & $fontSetup _
+	  & $pointSize _
+	  & $vcCaption _
+	  & $vcCaptionComp _
+	  & ' -pointsize 11.25' _
+	  & $releaseCaption _
+	  & $releaseCaptionComp _
 	  & ' "' &  _GetOutput($title) & 'USA_EN2.png"')
 
+   ;; L8A8 greyscale format
    _RunWait('tools\3dstex -r -o la8 "' &  _GetOutput($title) & 'USA_EN2.png" "' &  _GetOutput($title) & 'USA_EN2.bin"')
 
+   ;; Insert into banner models
    DirCopy('template\banner',  _GetOutput($title) & 'banner', $FC_OVERWRITE)
 
    For $i = 0 To 0
@@ -206,8 +210,10 @@ Func _GenerateBanner($title)
 	  FileClose($hFileOpen)
    Next
 
+   ;; Generate banner
    _RunWait('tools\3dstool -c -f banner.bin -t banner --banner-dir banner', _GetOutput($title))
 
+   ;; Clean up
    FileDelete(_GetOutput($title) & 'common1.png')
    FileDelete(_GetOutput($title) & 'common1.bin')
    FileDelete(_GetOutput($title) & 'common1_2.png')
