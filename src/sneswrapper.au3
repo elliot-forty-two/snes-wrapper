@@ -82,7 +82,7 @@ Func _ParseOpts()
 EndFunc
 
 Func _Help()
-   ConsoleWrite('Usage: sneswrapper.exe [-h] [-c|-u] [-b] [<folder>]' & @CRLF)
+   ConsoleWrite('Usage: ' & @ScriptName & ' [-h] [-c|-u] [-b] [<folder>]' & @CRLF)
    ConsoleWrite(@TAB & '-h --help' & @TAB & 'Show this help message' & @CRLF)
    ConsoleWrite(@TAB & '-c --clean' & @TAB & 'Recreate output' & @CRLF)
    ConsoleWrite(@TAB & '-u --update' & @TAB & 'Update existing CIAs with new emulator' & @CRLF)
