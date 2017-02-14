@@ -94,10 +94,9 @@ Func ImportROMs()
    Next
 EndFunc
 
-Func GetExtras($title, $crc32, $sha1)
-   DirCreate(_GetInput($title))
-
-   If FileFindFirstFile(_GetInput($title) & 'info.xml') == -1 Then
+Func OpenInfoXml($title, $sha1)
+   _FileListToArray(_GetInput($title), 'info.xml', $FLTA_FILES)
+   If @error <> 0 Then
 	  _LogProgress('Get info.xml...')
 	  Local $csv = _CSVReadFile($hashesCsv)
 	  Local $gameId
@@ -111,9 +110,15 @@ Func GetExtras($title, $crc32, $sha1)
 	  FileWrite(_GetInput($title) & 'info.xml', $xmlData)
    EndIf
 
-   Local $xmlFile = _XMLFileOpen(_GetInput($title) & 'info.xml')
+   Return _XMLFileOpen(_GetInput($title) & 'info.xml')
+EndFunc
 
-   If FileFindFirstFile(_GetInput($title) & 'label.*') == -1 Then
+Func GetGameImages($title, $crc32, $sha1)
+   DirCreate(_GetInput($title))
+   OpenInfoXml($title, $sha1)
+
+   _FileListToArray(_GetInput($title), 'label.*', $FLTA_FILES)
+   If @error <> 0 Then
 	  _LogProgress('Get label image...')
 	  Local $baseImgUrl, $logoSrc, $bannerSrc, $boxartSrc
 	  Local $nodes = _XMLGetValue('//baseImgUrl')
@@ -151,32 +156,44 @@ Func GetExtras($title, $crc32, $sha1)
 	  EndIf
    EndIf
 
-   If FileFindFirstFile(_GetInput($title) & 'banner.*') == -1 Then
+   _FileListToArray(_GetInput($title), 'banner.*', $FLTA_FILES)
+   If @error <> 0 Then
 	  _LogProgress('Get banner image...')
 	  Local $snapData = Request('https://raw.githubusercontent.com/elliot-forty-two/game-data/master/snes/snap/' & $crc32 & '.png')
 	  FileDelete(_GetInput($title) & 'banner.png')
 	  FileWrite(_GetInput($title) & 'banner.png', $snapData)
    EndIf
 
-   If FileFindFirstFile(_GetInput($title) & 'icon.*') == -1 Then
+   _FileListToArray(_GetInput($title), 'icon.*', $FLTA_FILES)
+   If @error <> 0 Then
 	  _LogProgress('Get icon image...')
 	  Local $titleData = Request('https://raw.githubusercontent.com/elliot-forty-two/game-data/master/snes/title/' & $crc32 & '.png')
 	  FileDelete(_GetInput($title) & 'icon.png')
 	  FileWrite(_GetInput($title) & 'icon.png', $titleData)
    EndIf
+EndFunc
 
+Func GetGameRelease($title, $sha1)
    _LogProgress('Get release year...')
+   OpenInfoXml($title, $sha1)
    Local $release
    Local $nodes = _XMLGetValue('//ReleaseDate')
    If @error == 0 Then
 	  $release = StringRight($nodes[1], 4)
    EndIf
-
    Return $release
 EndFunc
 
 Func ImportROM($title)
    Local $data = _RunWait('tools\nsrt.exe -hashes -infocsv "*.s?c"', _GetInput($title))
+
+   If $optClean Then
+	  FileDelete(_GetInput($title) & 'info.xml')
+	  FileDelete(_GetInput($title) & 'label.*')
+	  FileDelete(_GetInput($title) & 'banner.*')
+	  FileDelete(_GetInput($title) & 'icon.*')
+   EndIf
+
    Local $csv = _CSVRead($data)
    For $i=1 To UBound($csv) - 1
 	  $file =  $csv[$i][0]
@@ -202,13 +219,11 @@ Func ImportROM($title)
 		 ConsoleWrite('WARNING: Media serial not found' & @CRLF)
 	  EndIf
 
-	  ;;
-	  If $optClean Then
-		 FileDelete(_GetInput($title) & 'label.*')
-		 FileDelete(_GetInput($title) & 'banner.*')
-		 FileDelete(_GetInput($title) & 'icon.*')
-	  EndIf
-	  $release = GetExtras($title, $crc32, $sha1)
+	  ;; Game images
+	  GetGameImages($title, $crc32, $sha1)
+
+	  ;; Release year
+	  $release = GetGameRelease($title, $sha1)
 
 	  ;; Write info.txt
 	  $info = _GetInput($title) & 'info.txt'
