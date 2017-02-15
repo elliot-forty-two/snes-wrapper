@@ -9,11 +9,22 @@
 #include-once
 
 If @ScriptName == 'banner.au3' Or @ScriptName == 'banner.exe' Then
-   For $t = 1 To $CmdLine[0]
-	  $title = $CmdLine[$t]
-	  ConsoleWrite($t & ' of ' & $CmdLine[0] & ': ' & $title & @CRLF)
-	  _GenerateBanner($title)
-   Next
+   If $CmdLine[0] == 0 Then
+	  $titles = _FileListToArray(_GetInput(), '*', $FLTA_FOLDERS)
+	  If @error == 0 Then
+		 For $t = 1 To $titles[0]
+			$title = $titles[$t]
+			ConsoleWrite($t & " of " & $titles[0] & ": " & $title & @CRLF)
+			_GenerateBanner($title)
+		 Next
+	  EndIf
+   Else
+	  For $t = 1 To $CmdLine[0]
+		 $title = $CmdLine[$t]
+		 ConsoleWrite($t & ' of ' & $CmdLine[0] & ': ' & $title & @CRLF)
+		 _GenerateBanner($title)
+	  Next
+   EndIf
 EndIf
 
 Func _GenerateBanner($title)
