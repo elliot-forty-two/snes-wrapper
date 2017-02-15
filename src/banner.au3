@@ -49,34 +49,41 @@ Func _GenerateBanner($title)
 	  Return
    EndIf
 
+   Local $resourceDir = 'template\'
+   If Not FileExists($resourceDir) Then
+	  $resourceDir = 'tools\'
+   EndIf
    DirCreate(_GetOutput($title))
 
    ;; Process label, ETC1
    _RunWait('tools\convert "' & $fLabel & '" -rotate 270 -resize 23x44! "' & _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert template\USA_EN3.png "' &  _GetOutput($title) & 'temp.png" -geometry +122+205 -composite -flip "' &  _GetOutput($title) & 'USA_EN3.png"')
+   _RunWait('tools\convert ' & $resourceDir & 'USA_EN3.png "' &  _GetOutput($title) & 'temp.png" -geometry +122+205 -composite -flip "' &  _GetOutput($title) & 'USA_EN3.png"')
    _RunWait('tools\3dstex -r -o auto-etc1 "' &  _GetOutput($title) & 'USA_EN3.png" "' &  _GetOutput($title) & 'USA_EN3.bin"')
 
    _RunWait('tools\convert "' & $fLabel & '" -resize 54x18! "' &  _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert template\EUR_EN3.png "' &  _GetOutput($title) & 'temp.png" -geometry +198+227 -composite -flip "' &  _GetOutput($title) & 'EUR_EN3.png"')
+   _RunWait('tools\convert ' & $resourceDir & 'EUR_EN3.png "' &  _GetOutput($title) & 'temp.png" -geometry +198+227 -composite -flip "' &  _GetOutput($title) & 'EUR_EN3.png"')
    _RunWait('tools\3dstex -r -o auto-etc1 "' &  _GetOutput($title) & 'EUR_EN3.png" "' &  _GetOutput($title) & 'EUR_EN3.bin"')
 
    ;; Process banner, 32-bit ARGB
    _RunWait('tools\convert "' & $fBanner & '" -resize 120x102! "' &  _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert template\COMMON1.png "' &  _GetOutput($title) & 'temp.png" -geometry +4+6 -composite -flip "' &  _GetOutput($title) & 'common1.png"')
+   _RunWait('tools\convert ' & $resourceDir & 'COMMON1.png "' &  _GetOutput($title) & 'temp.png" -geometry +4+6 -composite -flip "' &  _GetOutput($title) & 'common1.png"')
    _RunWait('tools\3dstex -r -o rgba8 "' &  _GetOutput($title) & 'common1.png" "' &  _GetOutput($title) & 'common1.bin"')
 
    _RunWait('tools\convert "' & $fBanner & '" -resize 60x51! "' &  _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert template\COMMON1_2.png "' &  _GetOutput($title) & 'temp.png" -geometry +2+3 -composite -flip "' &  _GetOutput($title) & 'common1_2.png"')
+   _RunWait('tools\convert ' & $resourceDir & 'COMMON1_2.png "' &  _GetOutput($title) & 'temp.png" -geometry +2+3 -composite -flip "' &  _GetOutput($title) & 'common1_2.png"')
    _RunWait('tools\3dstex -r -o rgba8 "' &  _GetOutput($title) & 'common1_2.png" "' &  _GetOutput($title) & 'common1_2.bin"')
 
    _RunWait('tools\convert "' & $fBanner & '" -resize 30x26! "' &  _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert template\COMMON1_3.png "' &  _GetOutput($title) & 'temp.png" -geometry +1+1 -composite -flip "' &  _GetOutput($title) & 'common1_3.png"')
+   _RunWait('tools\convert ' & $resourceDir & 'COMMON1_3.png "' &  _GetOutput($title) & 'temp.png" -geometry +1+1 -composite -flip "' &  _GetOutput($title) & 'common1_3.png"')
    _RunWait('tools\3dstex -r -o rgba8 "' &  _GetOutput($title) & 'common1_3.png" "' &  _GetOutput($title) & 'common1_3.bin"')
 
    FileDelete(_GetOutput($title) & 'temp.png')
 
    ;; VC label
-   $font = _PathFull('template\SCE-PS3-RD-B-LATIN.TTF')
+   $font = _PathFull($resourceDir & 'SCE-PS3-RD-B-LATIN.TTF')
+   If Not FileExists($font) Then
+	  $font = _PathFull($resourceDir & 'SCE-PS3-RD-R-LATIN.TTF')
+   EndIf
    Local $fontSetup = ' -font "' & $font & '"' & ' -stretch Normal' & ' -background #0000' & ' -fill #1e1e1e'
    Local $vcCaption = ' -gravity center' & ' -interline-spacing 1' & ' -size 159x' & ' caption:"' & $vc & '"'
    Local $releaseCaption = ' -gravity center' & ' -kerning 1' & ' -size 159x' & ' caption:"Released: ' & $release & '"'
@@ -109,7 +116,7 @@ Func _GenerateBanner($title)
 
    ;; Create composite image
    _RunWait('tools\convert' _
-	  & ' template\USA_EN2.png' _
+	  & ' "' & $resourceDir & 'USA_EN2.png"' _
 	  & $fontSetup _
 	  & $pointSize _
 	  & $vcCaption _
@@ -124,7 +131,11 @@ Func _GenerateBanner($title)
    _RunWait('tools\3dstex -r -o la8 "' &  _GetOutput($title) & 'USA_EN2.png" "' &  _GetOutput($title) & 'USA_EN2.bin"')
 
    ;; Insert into banner models
-   DirCopy('template\banner',  _GetOutput($title) & 'banner', $FC_OVERWRITE)
+   If FileExists($resourceDir & 'banner') Then
+	  DirCopy($resourceDir & 'banner',  _GetOutput($title) & 'banner', $FC_OVERWRITE)
+   Else
+	  DirCopy('banner',  _GetOutput($title) & 'banner', $FC_OVERWRITE)
+   EndIf
 
    For $i = 0 To 0
 	  Local $file, $hFileOpen
