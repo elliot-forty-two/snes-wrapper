@@ -211,10 +211,8 @@ Func ImportROM($title)
    If StringInStr($name, ', The') Then
 	  $name = 'The ' & StringReplace($name, ', The', '')
    EndIf
+   $name = StringReplace($name, ' - ', ': ')
    $long = $name
-   If StringLen($name) > 36 Then
-	  ConsoleWrite('WARNING: Name longer than 36 characters' & @CRLF)
-   EndIf
 
    $serial = GetSerial($crc32, $region)
    If $serial == $crc32 Then
