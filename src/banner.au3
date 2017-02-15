@@ -18,6 +18,7 @@ EndIf
 
 Func _GenerateBanner($title)
    ;; Read ROM info
+   Local $short = _InfoGet($title, 'short')
    Local $long = _InfoGet($title, 'long')
    Local $author = _InfoGet($title, 'author')
    Local $serial = _InfoGet($title, 'serial')
@@ -28,7 +29,7 @@ Func _GenerateBanner($title)
    If StringLen($long) <> 0 Then
 	  $vc = $long
 	  If Not StringInStr($vc, '\n') Then
-		 $vc = StringReplace($vc, ': ', ':\n', 1)
+		 $vc = StringReplace($vc, ': ', ':\n', -1)
 	  EndIf
    EndIf
    If StringLen($release) == 0 Then

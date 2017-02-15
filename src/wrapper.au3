@@ -8,6 +8,7 @@
 
 Func ProcessTitle($title)
    ;; Read ROM info
+   Local $short = _InfoGet($title, 'short')
    Local $long = _InfoGet($title, 'long')
    Local $author = _InfoGet($title, 'author')
    Local $serial = _InfoGet($title, 'serial')
@@ -32,7 +33,7 @@ Func ProcessTitle($title)
 
    If $optClean Or Not FileExists(_GetOutput($title) & 'icon.bin') Then
 	  _LogProgress('Creating icon.bin ...')
-	  _CreateIcon($title, $long, $author)
+	  _CreateIcon($title, $short, $long, $author)
 	  If @error <> 0 Then
 		 SetError(-1)
 		 Return
@@ -54,14 +55,14 @@ Func ProcessTitle($title)
 	  _LogProgress('Creating CIA ...')
 	  DirCreate(_GetCiaDir())
 
-	  _CreateRomfs($title)
+	  _CreateRomfs($title, $long)
 
 	  _RunWait('tools\makerom -f cia -target t -rsf "template\custom.rsf" ' _
 		 & '-o "' & _GetCiaDir() & $title & '.cia" -exefslogo ' _
 		 & '-icon "' & _GetOutput($title) & 'icon.bin" ' _
 		 & '-banner "' & _GetOutput($title) & 'banner.bin" ' _
 		 & '-elf "template\' & $optEmulator & '" ' _
-		 & '-DAPP_TITLE="' & $title & '" ' _
+		 & '-DAPP_TITLE="' & $long & '" ' _
 		 & '-DAPP_PRODUCT_CODE="' & $serial & '" ' _
 		 & '-DAPP_UNIQUE_ID="0x' & $id & '" ' _
 		 & '-DAPP_ROMFS="' & _GetOutput($title) & 'romfs"')
@@ -73,7 +74,7 @@ Func ProcessTitle($title)
    _LogProgress('Done')
 EndFunc
 
-Func _CreateRomfs($title)
+Func _CreateRomfs($title, $long)
    DirCreate(_GetOutput($title) & "romfs")
 
    FileCopy(_GetInput($title) & "*.smc", _GetOutput($title) & "romfs\rom.smc")
@@ -85,10 +86,10 @@ Func _CreateRomfs($title)
    FileCopy(_GetInput($title) & "\*.bmp", _GetOutput($title) & "romfs\blargSnesBorder.bmp")
    FileCopy(_GetInput($title) & "\*.ini", _GetOutput($title) & "romfs\blargSnes.ini")
 
-   FileWrite(_GetOutput($title) & "romfs\rom.txt", $title)
+   FileWrite(_GetOutput($title) & "romfs\rom.txt", $long)
 EndFunc
 
-Func _CreateIcon($title, $long, $author)
+Func _CreateIcon($title, $short, $long, $author)
    DirCreate(_GetOutput($title))
 
    Local $file = _FileExistsArr('icon.png|icon.jpg|icon.jpeg|banner.png|banner.jpg|banner.jpeg', _GetInput($title))
@@ -100,7 +101,7 @@ Func _CreateIcon($title, $long, $author)
 
    _RunWait('tools\convert "' & $file & '" -resize 40x40! "' & _GetOutput($title) & 'temp.png"')
    _RunWait('tools\convert template\icon.png "' & _GetOutput($title) & 'temp.png" -gravity center -composite "' & _GetOutput($title) & 'icon.png"')
-   _RunWait('tools\bannertool makesmdh -s "' & $title & '" -l "' & $long & '" -p "' & $author & '" -i "' & _GetOutput($title) & 'icon.png" -o "' & _GetOutput($title) & 'icon.bin"')
+   _RunWait('tools\bannertool makesmdh -s "' & $short & '" -l "' & $long & '" -p "' & $author & '" -i "' & _GetOutput($title) & 'icon.png" -o "' & _GetOutput($title) & 'icon.bin"')
 
    FileDelete(_GetOutput($title) & "temp.png")
 EndFunc

@@ -157,19 +157,21 @@ Func GetGameImages($title, $crc32, $sha1)
    EndIf
 
    _FileListToArray(_GetInput($title), 'banner.*', $FLTA_FILES)
-   If @error <> 0 Then
-	  _LogProgress('Get banner image...')
-	  Local $snapData = Request('https://raw.githubusercontent.com/elliot-forty-two/game-data/master/snes/snap/' & $crc32 & '.png')
-	  FileDelete(_GetInput($title) & 'banner.png')
-	  FileWrite(_GetInput($title) & 'banner.png', $snapData)
-   EndIf
-
+   Local $getBanner = @error <> 0
    _FileListToArray(_GetInput($title), 'icon.*', $FLTA_FILES)
-   If @error <> 0 Then
-	  _LogProgress('Get icon image...')
+   Local $getIcon = @error <> 0
+   If $getBanner Or $getIcon Then
 	  Local $titleData = Request('https://raw.githubusercontent.com/elliot-forty-two/game-data/master/snes/title/' & $crc32 & '.png')
-	  FileDelete(_GetInput($title) & 'icon.png')
-	  FileWrite(_GetInput($title) & 'icon.png', $titleData)
+	  If $getBanner Then
+		 _LogProgress('Get banner image...')
+		 FileDelete(_GetInput($title) & 'banner.png')
+		 FileWrite(_GetInput($title) & 'banner.png', $titleData)
+	  EndIf
+	  If $getIcon Then
+		 _LogProgress('Get icon image...')
+		 FileDelete(_GetInput($title) & 'icon.png')
+		 FileWrite(_GetInput($title) & 'icon.png', $titleData)
+	  EndIf
    EndIf
 EndFunc
 
@@ -208,11 +210,50 @@ Func ImportROM($title)
    If $name == 'Not found in Database' Then
 	  $name = $title
    EndIf
+
    If StringInStr($name, ', The') Then
 	  $name = 'The ' & StringReplace($name, ', The', '')
    EndIf
+   If StringInStr($name, ', An') Then
+	  $name = 'An ' & StringReplace($name, ', An', '')
+   EndIf
    $name = StringReplace($name, ' - ', ': ')
-   $long = $name
+
+   Local $short = $name
+   If StringLen($short) > 32 Then
+	  ;; Try just the sub-title
+	  If StringInStr($short, ': ') Then
+		 Local $arr = StringSplit($short, ': ', $STR_ENTIRESPLIT)
+		 $short = $arr[$arr[0]]
+	  EndIf
+	  ;; Try removing duplicate words
+	  If StringLen($short) > 32 Then
+		 Local $c = 0
+		 For $s In StringSplit($short, ' ')
+			$c += StringLen($s) + 1
+			If StringLen($s) > 3 And StringInStr($short, $s, 0, 1, $c) Then
+			   $short = StringReplace($short, ' ' & $s, '', -1)
+			EndIf
+		 Next
+	  EndIf
+	  ;; Try removing on 'The '
+	  If StringLen($short) > 32 And StringLeft($short, 4) == 'The ' Then
+		 $short = StringMid($short, 4)
+	  EndIf
+
+	  If StringLen($short) <= 32 Then
+		 ConsoleWrite('Short name: ' & $short & @CRLF)
+	  EndIf
+   EndIf
+   If StringLen($short) > 32 Then
+	  $short = StringLeft($short, 31) & '…'
+	  ConsoleWrite('Short name: ' & $short & @CRLF)
+   EndIf
+
+   Local $long = $name
+   If StringLen($long) > 64 Then
+	  ConsoleWrite('WARNING: Long name > 64 chars' & @CRLF)
+   EndIf
 
    $serial = GetSerial($crc32, $region)
    If $serial == $crc32 Then
@@ -228,7 +269,7 @@ Func ImportROM($title)
    ;; Write info.txt
    $info = _GetInput($title) & 'info.txt'
    FileDelete($info)
-   FileWriteLine($info,'title=' & $name)
+   FileWriteLine($info,'short=' & $short)
    FileWriteLine($info,'long=' & $long)
    FileWriteLine($info,'author=' & $company)
    FileWriteLine($info,'release=' & $release)
