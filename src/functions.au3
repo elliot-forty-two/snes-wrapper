@@ -62,13 +62,13 @@ Func _RunWait($program, $workingdir = @Workingdir, $show_flag = @SW_HIDE, $opt_f
    Local $sOut = StdoutRead($pid)
    Local $sErr = StderrRead($pid)
    If $result <> 0 Then
-	  _LogError('Program failed: ' & $program)
+	  _LogError('Command failed: ' & $program)
 	  _LogError('Return code: ' & $result)
    EndIf
    Return $sOut
 EndFunc
 
-Func _InfoGet($title, $key)
+Func _GetInfoValue($title, $key)
    Local $sInfo = FileRead(_GetInput($title) & 'info.txt')
    Local $arr = StringRegExp($sInfo, $key & '=(.*)', 1)
    If UBound($arr) == 1 Then

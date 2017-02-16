@@ -19,9 +19,9 @@ If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then
    _LogMessage('Using folder: ' & $optFolder)
 
    If $optUpdate Then
-	  _LogMessage('Updating CIAs')
 	  $cias = _FileListToArray(_GetCiaOutput(), '*.cia', $FLTA_FILES)
 	  If @error == 0 Then
+		 _LogMessage('Updating CIA files')
 		 For $c = 1 To $cias[0]
 			$cia = $cias[$c]
 			_LogMessage($c & " of " & $cias[0] & ": " & $cia)
@@ -42,12 +42,15 @@ EndIf
 
 Func ProcessTitle($title)
    ;; Read ROM info
-   Local $short = _InfoGet($title, 'short')
-   Local $long = _InfoGet($title, 'long')
-   Local $author = _InfoGet($title, 'author')
-   Local $serial = _InfoGet($title, 'serial')
-   Local $id = _InfoGet($title, 'id')
-   Local $release = _InfoGet($title, 'release')
+   Local $short = _GetInfoValue($title, 'short')
+   Local $long = _GetInfoValue($title, 'long')
+   Local $author = _GetInfoValue($title, 'author')
+   Local $serial = _GetInfoValue($title, 'serial')
+   Local $id = _GetInfoValue($title, 'id')
+   If Not $short Or Not $long Or Not $author Or Not $serial Or Not $id Then
+	  _LogError('Game info not found')
+	  Return SetError(-1)
+   EndIf
 
    Local $file
    $files = _FileListToArray(_GetInput($title), '*.s?c', $FLTA_FILES)
@@ -58,19 +61,17 @@ Func ProcessTitle($title)
 	  EndIf
    Next
    If Not FileExists(_GetInput($title) & $file) Then
-	  _LogError('Missing rom file. Make sure you have a rom file in ' & _GetInput($title))
-	  SetError(-1)
-	  Return
+	  _LogError('ROM file not found, make sure you have a rom file in ' & _GetInput($title))
+	  Return SetError(-1)
    EndIf
 
    Local $cleanCia = False
 
    If $optClean Or Not FileExists(_GetOutput($title) & 'icon.bin') Then
 	  _LogProgress('Creating icon.bin ...')
-	  CreateIcon($title, $short, $long, $author)
+	  CreateIcon($title)
 	  If @error <> 0 Then
-		 SetError(-1)
-		 Return
+		 Return SetError(-1)
 	  EndIf
 	  $cleanCia = True
    EndIf
@@ -79,8 +80,7 @@ Func ProcessTitle($title)
 	  _LogProgress('Creating banner.bin ...')
 	  GenerateBanner($title)
 	  If @error <> 0 Then
-		 SetError(-1)
-		 Return
+		 Return SetError(-1)
 	  EndIf
 	  $cleanCia = True
    EndIf
@@ -89,7 +89,10 @@ Func ProcessTitle($title)
 	  _LogProgress('Creating CIA ...')
 	  DirCreate(_GetCiaOutput())
 
-	  CreateRomfs($title, $long)
+	  CreateRomfs($title)
+	  If @error <> 0 Then
+		 Return SetError(-1)
+	  EndIf
 
 	  _RunWait('tools\makerom -f cia -target t -rsf "template\custom.rsf" ' _
 		 & '-o "' & _GetCiaOutput() & $title & '.cia" -exefslogo ' _
@@ -108,29 +111,43 @@ Func ProcessTitle($title)
    _LogProgress('Done')
 EndFunc
 
-Func CreateRomfs($title, $long)
+Func CreateRomfs($title)
    DirCreate(_GetOutput($title) & "romfs")
+   Local $long = _GetInfoValue($title, 'long')
+   If Not $long Then
+	  _LogError('Game info not found')
+	  Return SetError(-1)
+   EndIf
 
    FileCopy(_GetInput($title) & "*.smc", _GetOutput($title) & "romfs\rom.smc")
    FileCopy(_GetInput($title) & "*.sfc", _GetOutput($title) & "romfs\rom.smc")
 
-   ;; snes9x
-   FileCopy(_GetInput($title) & "\*.cfg", _GetOutput($title) & "romfs\rom.cfg")
-   ;; blargsnes
-   FileCopy(_GetInput($title) & "\*.bmp", _GetOutput($title) & "romfs\blargSnesBorder.bmp")
-   FileCopy(_GetInput($title) & "\*.ini", _GetOutput($title) & "romfs\blargSnes.ini")
+   If $optEmulator == $emuSnes9x Then
+	  ;; snes9x
+	  FileCopy(_GetInput($title) & "\*.cfg", _GetOutput($title) & "romfs\rom.cfg")
+   Else
+	  ;; blargsnes
+	  FileCopy(_GetInput($title) & "\*.bmp", _GetOutput($title) & "romfs\blargSnesBorder.bmp")
+	  FileCopy(_GetInput($title) & "\*.ini", _GetOutput($title) & "romfs\blargSnes.ini")
+   EndIf
 
    FileWrite(_GetOutput($title) & "romfs\rom.txt", $long)
 EndFunc
 
-Func CreateIcon($title, $short, $long, $author)
+Func CreateIcon($title)
    DirCreate(_GetOutput($title))
+   Local $short = _GetInfoValue($title, 'short')
+   Local $long = _GetInfoValue($title, 'long')
+   Local $author = _GetInfoValue($title, 'author')
+   If Not $short Or Not $long Or Not $author Then
+	  _LogError('Game info not found')
+	  Return SetError(-1)
+   EndIf
 
    Local $file = _FileExistsArr('icon.png|icon.jpg|icon.jpeg|banner.png|banner.jpg|banner.jpeg', _GetInput($title))
    If Not $file Then
 	  _LogError('Icon image not found')
-	  SetError(-1)
-	  Return
+	  Return SetError(-1)
    EndIf
 
    _RunWait('tools\convert "' & $file & '" -resize 40x40! "' & _GetOutput($title) & 'temp.png"')
@@ -206,7 +223,7 @@ Func ParseOpts()
 		 If Not $sOpt Then ExitLoop
 		 Switch $sOpt
 		 Case '?'
-			_LogError('Unknown option ' & $GetOpt_Opt & @CRLF)
+			_LogError('Unknown option: ' & $GetOpt_Opt & @CRLF)
 			Help()
 		 Case ':' ; Options with missing required arguments come here. @extended is set to $E_GETOPT_MISSING_ARGUMENT
 		 Case 'c'
@@ -217,7 +234,7 @@ Func ParseOpts()
 			$optVerbose = $GetOpt_Arg
 		 Case 'b'
 			If $GetOpt_Arg Then
-			   $optEmulator = "blargSnes.elf"
+			   $optEmulator = $emuBlarg
 			EndIf
 		 Case 'h'
 			Help()

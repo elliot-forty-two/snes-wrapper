@@ -26,10 +26,13 @@ If @ScriptName == 'snesscraper.au3' Or @ScriptName == 'snesscraper.exe' Then
 
    UpdateGameData()
 
-   _LogMessage('Clean ROMs')
-   _RunWait('tools\nsrt.exe -savetype uncompressed -remhead -rename -lowext -noext "*"', _GetInput())
+   _FileListToArray(_GetInput(), '*', $FLTA_FILES)
+   If @error == 0 Then
+	  _LogMessage('Cleaning files')
+	  _RunWait('tools\nsrt.exe -savetype uncompressed -remhead -rename -lowext -noext "*"', _GetInput())
+   EndIf
 
-   ImportROMs()
+   ScrapeFiles()
 EndIf
 
 Func UpdateGameData()
@@ -46,7 +49,7 @@ Func UpdateGameData()
    EndIf
 EndFunc
 
-Func GetSerial($crc32, $region = 'USA')
+Func GetGameSerial($crc32, $region = 'USA')
    Local $serial = $crc32
 
    If FileExists($datomaticCsv) Then
@@ -63,8 +66,8 @@ Func GetSerial($crc32, $region = 'USA')
    Return $serial
 EndFunc
 
-Func ImportROMs()
-   _LogMessage('Import ROMs')
+Func ScrapeFiles()
+   _LogMessage('Scraping files')
 
    Local $file
    $files = _FileListToArray(_GetInput(), '*.s?c', $FLTA_FILES)
@@ -97,7 +100,7 @@ EndFunc
 Func OpenInfoXml($title, $sha1)
    _FileListToArray(_GetInput($title), 'info.xml', $FLTA_FILES)
    If @error <> 0 Then
-	  _LogProgress('Get info.xml...')
+	  _LogProgress('Get info.xml ...')
 	  Local $csv = _CSVReadFile($hashesCsv)
 	  Local $gameId
 	  For $i=1 To UBound($csv) - 1
@@ -119,7 +122,7 @@ Func GetGameImages($title, $crc32, $sha1)
 
    _FileListToArray(_GetInput($title), 'label.*', $FLTA_FILES)
    If @error <> 0 Then
-	  _LogProgress('Get label image...')
+	  _LogProgress('Get label image ...')
 	  Local $baseImgUrl, $logoSrc, $bannerSrc, $boxartSrc
 	  Local $nodes = _XMLGetValue('//baseImgUrl')
 	  If @error == 0 Then
@@ -152,7 +155,7 @@ Func GetGameImages($title, $crc32, $sha1)
 		 FileDelete(_GetInput($title) & 'label' & $ext)
 		 FileWrite(_GetInput($title) & 'label' & $ext, $labelData)
 	  Else
-		 _LogError('No logo found')
+		 _LogError('Label image not found')
 	  EndIf
    EndIf
 
@@ -163,12 +166,12 @@ Func GetGameImages($title, $crc32, $sha1)
    If $getBanner Or $getIcon Then
 	  Local $titleData = Request('https://raw.githubusercontent.com/elliot-forty-two/game-data/master/snes/title/' & $crc32 & '.png')
 	  If $getBanner Then
-		 _LogProgress('Get banner image...')
+		 _LogProgress('Get banner image ...')
 		 FileDelete(_GetInput($title) & 'banner.png')
 		 FileWrite(_GetInput($title) & 'banner.png', $titleData)
 	  EndIf
 	  If $getIcon Then
-		 _LogProgress('Get icon image...')
+		 _LogProgress('Get icon image ...')
 		 FileDelete(_GetInput($title) & 'icon.png')
 		 FileWrite(_GetInput($title) & 'icon.png', $titleData)
 	  EndIf
@@ -176,7 +179,7 @@ Func GetGameImages($title, $crc32, $sha1)
 EndFunc
 
 Func GetGameRelease($title, $sha1)
-   _LogProgress('Get release year...')
+   _LogProgress('Get release year ...')
    OpenInfoXml($title, $sha1)
    Return StringRight(_XMLGetFirstValue('//ReleaseDate'), 4)
 EndFunc
@@ -192,7 +195,7 @@ Func ImportROM($title)
 
    _FileListToArray(_GetInput($title), 'rominfo.xml', $FLTA_FILES)
    If @error <> 0 Then
-	  _LogProgress('Generate rominfo.xml...')
+	  _LogProgress('Get rominfo.xml ...')
 	  Local $xmlData = _RunWait('tools\nsrt.exe -hashes -infoxml "*.s?c"', _GetInput($title))
 	  FileDelete(_GetInput($title) & 'rominfo.xml')
 	  FileWrite(_GetInput($title) & 'rominfo.xml', $xmlData)
@@ -252,10 +255,10 @@ Func ImportROM($title)
 
    Local $long = $name
    If StringLen($long) > 64 Then
-	  _LogWarning('Long name > 64 chars')
+	  _LogWarning('Long name greater than 64 characters')
    EndIf
 
-   $serial = GetSerial($crc32, $region)
+   $serial = GetGameSerial($crc32, $region)
    If $serial == $crc32 Then
 	  _LogWarning('Media serial not found')
    EndIf
@@ -294,7 +297,7 @@ Func ParseOpts()
 		 If Not $sOpt Then ExitLoop
 		 Switch $sOpt
 		 Case '?'
-			_LogMessage('Unknown option ' & $GetOpt_Opt & @CRLF)
+			_LogMessage('Unknown option: ' & $GetOpt_Opt & @CRLF)
 			Help()
 		 Case ':' ; Options with missing required arguments come here. @extended is set to $E_GETOPT_MISSING_ARGUMENT
 		 Case 'c'

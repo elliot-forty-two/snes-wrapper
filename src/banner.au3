@@ -26,12 +26,12 @@ EndIf
 
 Func GenerateBanner($title)
    ;; Read ROM info
-   Local $short = _InfoGet($title, 'short')
-   Local $long = _InfoGet($title, 'long')
-   Local $author = _InfoGet($title, 'author')
-   Local $serial = _InfoGet($title, 'serial')
-   Local $id = _InfoGet($title, 'id')
-   Local $release = _InfoGet($title, 'release')
+   Local $short = _GetInfoValue($title, 'short')
+   Local $long = _GetInfoValue($title, 'long')
+   Local $author = _GetInfoValue($title, 'author')
+   Local $serial = _GetInfoValue($title, 'serial')
+   Local $id = _GetInfoValue($title, 'id')
+   Local $release = _GetInfoValue($title, 'release')
 
    Local $vc
    If StringLen($long) <> 0 Then
@@ -41,7 +41,7 @@ Func GenerateBanner($title)
 	  EndIf
    EndIf
    If StringLen($release) == 0 Then
-	  _LogWarning('Missing release')
+	  _LogWarning('Release year not found')
    EndIf
 
    Local $fLabel = _FileExistsArr('label.png|label.jpg|label.jpeg', _GetInput($title))
