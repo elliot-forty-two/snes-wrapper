@@ -70,7 +70,7 @@ Func ScrapeFiles()
    _LogMessage('Scraping files')
 
    Local $file
-   $files = _FileListToArray(_GetInput(), '*.s?c', $FLTA_FILES)
+   $files = _FileListToArrayRec(_GetInput(), '*.s?c', $FLTAR_FILES, $FLTAR_NORECUR, $FLTAR_SORT, $FLTAR_NOPATH)
    If @error == 0 Then
 	  For $i = 1 To $files[0]
 		 $ext = StringRight($files[$i], 3)
@@ -89,9 +89,9 @@ Func ScrapeFiles()
 	  Next
    EndIf
 
-   $titles = _FileListToArray(_GetInput(), '*', $FLTA_FOLDERS)
+   $titles = _FileListToArrayRec(_GetInput(), '*', $FLTAR_FOLDERS, $FLTAR_NORECUR, $FLTAR_SORT, $FLTAR_NOPATH)
    For $t = 1 To $titles[0]
-	  $title = $titles[$t]
+	  $title = StringReplace($titles[$t], '\', '')
 	  _LogVerbose('')
 	  _LogMessage($t & ' of ' & $titles[0] & ': ' & $title)
 	  ImportROM($title)
@@ -99,8 +99,7 @@ Func ScrapeFiles()
 EndFunc
 
 Func OpenInfoXml($title, $sha1)
-   _FileListToArray(_GetInput($title), 'info.xml', $FLTA_FILES)
-   If @error <> 0 Then
+   If Not FileExists(_GetInput($title) & 'info.xml') Then
 	  _LogProgress('Get info.xml ...')
 	  Local $csv = _CSVReadFile($hashesCsv)
 	  Local $gameId
@@ -198,8 +197,7 @@ Func ImportROM($title)
 	  FileDelete(_GetInput($title) & 'icon.*')
    EndIf
 
-   _FileListToArray(_GetInput($title), 'rominfo.xml', $FLTA_FILES)
-   If @error <> 0 Then
+   If Not FileExists(_GetInput($title) & 'rominfo.xml') Then
 	  _LogProgress('Get rominfo.xml ...')
 	  Local $xmlData = _RunWait('tools\nsrt.exe -hashes -infoxml "*.s?c"', _GetInput($title))
 	  FileDelete(_GetInput($title) & 'rominfo.xml')

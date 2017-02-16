@@ -19,7 +19,7 @@ If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then
    _LogMessage('Using folder: ' & $optFolder)
 
    If $optUpdate Then
-	  $cias = _FileListToArray(_GetCiaOutput(), '*.cia', $FLTA_FILES)
+	  $cias = _FileListToArrayRec(_GetCiaOutput(), '*.cia', $FLTAR_FILES, $FLTAR_NORECUR, $FLTAR_SORT, $FLTAR_NOPATH)
 	  If @error == 0 Then
 		 _LogMessage('Updating CIA files')
 		 For $c = 1 To $cias[0]
@@ -30,10 +30,10 @@ If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then
 		 Next
 	  EndIf
    Else
-	  $titles = _FileListToArray(_GetInput(), '*', $FLTA_FOLDERS)
+	  $titles = _FileListToArrayRec(_GetInput(), '*', $FLTAR_FOLDERS, $FLTAR_NORECUR, $FLTAR_SORT, $FLTAR_NOPATH)
 	  If @error == 0 Then
 		 For $t = 1 To $titles[0]
-			$title = $titles[$t]
+			$title = StringReplace($titles[$t], '\', '')
 			_LogVerbose('')
 			_LogMessage($t & " of " & $titles[0] & ": " & $title)
 			ProcessTitle($title)
@@ -55,7 +55,7 @@ Func ProcessTitle($title)
    EndIf
 
    Local $file
-   $files = _FileListToArray(_GetInput($title), '*.s?c', $FLTA_FILES)
+   $files = _FileListToArrayRec(_GetInput($title), '*.s?c', $FLTAR_FILES, $FLTAR_NORECUR, $FLTAR_SORT, $FLTAR_NOPATH)
    For $i = 1 To $files[0]
 	  $ext = StringRight($files[$i], 3)
 	  If $ext == 'smc' Or $ext == 'sfc' Then
