@@ -24,6 +24,7 @@ If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then
 		 _LogMessage('Updating CIA files')
 		 For $c = 1 To $cias[0]
 			$cia = $cias[$c]
+			_LogVerbose('')
 			_LogMessage($c & " of " & $cias[0] & ": " & $cia)
 			UpdateCIA($cia)
 		 Next
@@ -33,6 +34,7 @@ If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then
 	  If @error == 0 Then
 		 For $t = 1 To $titles[0]
 			$title = $titles[$t]
+			_LogVerbose('')
 			_LogMessage($t & " of " & $titles[0] & ": " & $title)
 			ProcessTitle($title)
 		 Next
@@ -256,6 +258,7 @@ Func Help()
    _LogMessage(@TAB & '-c --clean' & @TAB & 'Recreate output')
    _LogMessage(@TAB & '-u --update' & @TAB & 'Update existing CIAs with new emulator')
    _LogMessage(@TAB & '-b --blarg' & @TAB & 'Inject blargSNES instead of snes9x')
+   _LogMessage(@TAB & '-v --verbose' & @TAB & 'Verbose output')
    _LogMessage(@TAB & '<folder>' & @TAB & 'Set the working folder where "input" folder resides')
    Exit
 EndFunc

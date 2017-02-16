@@ -92,6 +92,7 @@ Func ScrapeFiles()
    $titles = _FileListToArray(_GetInput(), '*', $FLTA_FOLDERS)
    For $t = 1 To $titles[0]
 	  $title = $titles[$t]
+	  _LogVerbose('')
 	  _LogMessage($t & ' of ' & $titles[0] & ': ' & $title)
 	  ImportROM($title)
    Next
@@ -108,7 +109,9 @@ Func OpenInfoXml($title, $sha1)
 			$gameId =  $csv[$i][1]
 		 EndIf
 	  Next
-	  Local $xmlData = Request('http://thegamesdb.net/api/GetGame.php?id=' & $gameId)
+	  Local $url = 'http://thegamesdb.net/api/GetGame.php?id=' & $gameId
+	  _LogVerbose('Request: ' & $url)
+	  Local $xmlData = Request($url)
 	  FileDelete(_GetInput($title) & 'info.xml')
 	  FileWrite(_GetInput($title) & 'info.xml', $xmlData)
    EndIf
@@ -150,6 +153,7 @@ Func GetGameImages($title, $crc32, $sha1)
 		 ElseIf $boxartSrc Then
 			$src = $boxartSrc
 		 EndIf
+		 _LogVerbose('Request: ' & $baseImgUrl & $src)
 		 Local $labelData = Request($baseImgUrl & $src)
 		 Local $ext = StringRight($src, 4)
 		 FileDelete(_GetInput($title) & 'label' & $ext)
@@ -164,14 +168,15 @@ Func GetGameImages($title, $crc32, $sha1)
    _FileListToArray(_GetInput($title), 'icon.*', $FLTA_FILES)
    Local $getIcon = @error <> 0
    If $getBanner Or $getIcon Then
-	  Local $titleData = Request('https://raw.githubusercontent.com/elliot-forty-two/game-data/master/snes/title/' & $crc32 & '.png')
+	  _LogProgress('Get title image ...')
+	  Local $url = 'https://raw.githubusercontent.com/elliot-forty-two/game-data/master/snes/title/' & $crc32 & '.png'
+	  _LogVerbose('Request: ' & $url)
+	  Local $titleData = Request($url)
 	  If $getBanner Then
-		 _LogProgress('Get banner image ...')
 		 FileDelete(_GetInput($title) & 'banner.png')
 		 FileWrite(_GetInput($title) & 'banner.png', $titleData)
 	  EndIf
 	  If $getIcon Then
-		 _LogProgress('Get icon image ...')
 		 FileDelete(_GetInput($title) & 'icon.png')
 		 FileWrite(_GetInput($title) & 'icon.png', $titleData)
 	  EndIf
@@ -322,6 +327,7 @@ Func Help()
    _LogMessage('Usage: ' & @ScriptName & ' [-h] [-c] [<folder>]')
    _LogMessage(@TAB & '-h --help' & @TAB & 'Show this help message')
    _LogMessage(@TAB & '-c --clean' & @TAB & 'Recreate output')
+   _LogMessage(@TAB & '-v --verbose' & @TAB & 'Verbose output')
    _LogMessage(@TAB & '<folder>' & @TAB & 'Set the working folder where "input" folder resides')
    Exit
 EndFunc

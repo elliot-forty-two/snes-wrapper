@@ -47,15 +47,13 @@ Func GenerateBanner($title)
    Local $fLabel = _FileExistsArr('label.png|label.jpg|label.jpeg', _GetInput($title))
    If Not $fLabel Then
 	  _LogError('Label image not found')
-	  SetError(-1)
-	  Return
+	  Return SetError(-1)
    EndIf
 
    Local $fBanner = _FileExistsArr('banner.png|banner.jpg|banner.jpeg', _GetInput($title))
    If Not $fBanner Then
 	  _LogError('Banner image not found')
-	  SetError(-1)
-	  Return
+	  Return SetError(-1)
    EndIf
 
    Local $resourceDir = 'template\'

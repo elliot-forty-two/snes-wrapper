@@ -37,10 +37,20 @@ Func _GetCiaOutput()
 EndFunc
 
 Func _LogProgress($msg)
-   ConsoleWrite('                                ')
-   ConsoleWrite(@CR)
-   ConsoleWrite($msg)
-   ConsoleWrite(@CR)
+   If $optVerbose Then
+	  _LogMessage($msg)
+   Else
+	  ConsoleWrite('                                ')
+	  ConsoleWrite(@CR)
+	  ConsoleWrite($msg)
+	  ConsoleWrite(@CR)
+   EndIf
+EndFunc
+
+Func _LogVerbose($msg)
+   If $optVerbose Then
+	  _LogMessage($msg)
+   EndIf
 EndFunc
 
 Func _LogError($msg)
@@ -56,6 +66,7 @@ Func _LogMessage($msg)
 EndFunc
 
 Func _RunWait($program, $workingdir = @Workingdir, $show_flag = @SW_HIDE, $opt_flag = $STDERR_CHILD + $STDOUT_CHILD)
+   _LogVerbose('Run: ' & $program)
    Local $pid = Run($program, $workingdir, $show_flag, $opt_flag)
    ProcessWaitClose($pid)
    Local $result = @extended
@@ -64,6 +75,7 @@ Func _RunWait($program, $workingdir = @Workingdir, $show_flag = @SW_HIDE, $opt_f
    If $result <> 0 Then
 	  _LogError('Command failed: ' & $program)
 	  _LogError('Return code: ' & $result)
+	  _LogVerbose($sErr)
    EndIf
    Return $sOut
 EndFunc
@@ -81,10 +93,13 @@ Func _FileExistsArr($files, $dir = '')
    If Not IsArray($files) Then
 	  $files = StringSplit($files, '|')
    EndIf
+   If StringLen($dir) > 0 And StringRight($dir, 1) <> '\' Then
+	  $dir &= '\'
+   EndIf
    For $i = 1 to $files[0]
 	  Local $file = $files[$i]
-	  If FileExists($dir & '/' & $file) Then
-		 Return $dir & '/' & $file
+	  If FileExists($dir & $file) Then
+		 Return $dir & $file
 	  EndIf
    Next
    Return Null
