@@ -1,4 +1,6 @@
 
+#NoTrayIcon
+
 #include <File.au3>
 #include 'lib/GetOpt.au3'
 #include 'lib/Json.au3'
