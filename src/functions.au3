@@ -90,13 +90,10 @@ Func _GetInfoValue($title, $key)
 EndFunc
 
 Func _FileExistsArr($files, $dir = '')
-   If Not IsArray($files) Then
-	  $files = StringSplit($files, '|')
-   EndIf
    If StringLen($dir) > 0 And StringRight($dir, 1) <> '\' Then
 	  $dir &= '\'
    EndIf
-   For $i = 1 to $files[0]
+   For $i = 0 to UBound($files)
 	  Local $file = $files[$i]
 	  If FileExists($dir & $file) Then
 		 Return $dir & $file

@@ -3,6 +3,7 @@
 
 #include <File.au3>
 #include <Math.au3>
+#include 'options.au3'
 #include 'functions.au3'
 
 If @ScriptName == 'banner.au3' Or @ScriptName == 'banner.exe' Then
@@ -44,13 +45,15 @@ Func GenerateBanner($title)
 	  _LogWarning('Release year not found')
    EndIf
 
-   Local $fLabel = _FileExistsArr('label.png|label.jpg|label.jpeg', _GetInput($title))
+   Local $files = ['label.png', 'label.jpg', 'label.jpeg']
+   Local $fLabel = _FileExistsArr($files, _GetInput($title))
    If Not $fLabel Then
 	  _LogError('Label image not found')
 	  Return SetError(-1)
    EndIf
 
-   Local $fBanner = _FileExistsArr('banner.png|banner.jpg|banner.jpeg', _GetInput($title))
+   Local $files = ['banner.png', 'banner.jpg', 'banner.jpeg']
+   Local $fBanner = _FileExistsArr($files, _GetInput($title))
    If Not $fBanner Then
 	  _LogError('Banner image not found')
 	  Return SetError(-1)

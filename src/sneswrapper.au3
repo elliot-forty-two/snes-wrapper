@@ -146,7 +146,8 @@ Func CreateIcon($title)
 	  Return SetError(-1)
    EndIf
 
-   Local $file = _FileExistsArr('icon.png|icon.jpg|icon.jpeg|banner.png|banner.jpg|banner.jpeg', _GetInput($title))
+   Local $files = ['icon.png', 'icon.jpg', 'icon.jpeg', 'banner.png', 'banner.jpg', 'banner.jpeg']
+   Local $file = _FileExistsArr($files, _GetInput($title))
    If Not $file Then
 	  _LogError('Icon image not found')
 	  Return SetError(-1)
