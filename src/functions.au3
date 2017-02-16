@@ -3,12 +3,6 @@
 
 #include 'lib/_XMLDomWrapper.au3'
 
-Global $optClean = False
-Global $optUpdate = False
-Global $optVerbose = False
-Global $optEmulator = "snes9x_3ds.elf"
-Global $optFolder = @WorkingDir
-
 Func _GetInput($title = '')
    Local $ret = ''
    If StringLen($optFolder) > 0 Then
@@ -33,7 +27,7 @@ Func _GetOutput($title = '')
    Return $ret
 EndFunc
 
-Func _GetCiaDir()
+Func _GetCiaOutput()
    Local $ret = ''
    If StringLen($optFolder) > 0 Then
 	  $ret &= $optFolder & '\'
@@ -49,21 +43,27 @@ Func _LogProgress($msg)
    ConsoleWrite(@CR)
 EndFunc
 
-Func _Error($msg)
-   ConsoleWriteError($msg & @CRLF)
+Func _LogError($msg)
+   ConsoleWriteError('ERROR: ' & $msg & @CRLF)
+EndFunc
+
+Func _LogWarning($msg)
+   ConsoleWriteError('WARNING: ' & $msg & @CRLF)
+EndFunc
+
+Func _LogMessage($msg)
+   ConsoleWrite($msg & @CRLF)
 EndFunc
 
 Func _RunWait($program, $workingdir = @Workingdir, $show_flag = @SW_HIDE, $opt_flag = $STDERR_CHILD + $STDOUT_CHILD)
    Local $pid = Run($program, $workingdir, $show_flag, $opt_flag)
    ProcessWaitClose($pid)
-
+   Local $result = @extended
    Local $sOut = StdoutRead($pid)
    Local $sErr = StderrRead($pid)
-   If @extended <> 0 Then
-;~ 	  ConsoleWriteError('Return code: ' & @extended & @CRLF)
-;~ 	  ConsoleWriteError($sErr)
-   Else
-;~ 	  ConsoleWrite($sOut)
+   If $result <> 0 Then
+	  _LogError('Program failed: ' & $program)
+	  _LogError('Return code: ' & $result)
    EndIf
    Return $sOut
 EndFunc

@@ -1,12 +1,9 @@
 
-#include <MsgBoxConstants.au3>
-#include <FileConstants.au3>
-#include <Array.au3>
+#include-once
+
 #include <File.au3>
 #include <Math.au3>
 #include 'functions.au3'
-
-#include-once
 
 If @ScriptName == 'banner.au3' Or @ScriptName == 'banner.exe' Then
    If $CmdLine[0] == 0 Then
@@ -14,20 +11,20 @@ If @ScriptName == 'banner.au3' Or @ScriptName == 'banner.exe' Then
 	  If @error == 0 Then
 		 For $t = 1 To $titles[0]
 			$title = $titles[$t]
-			ConsoleWrite($t & " of " & $titles[0] & ": " & $title & @CRLF)
-			_GenerateBanner($title)
+			_LogMessage($t & " of " & $titles[0] & ": " & $title)
+			GenerateBanner($title)
 		 Next
 	  EndIf
    Else
 	  For $t = 1 To $CmdLine[0]
 		 $title = $CmdLine[$t]
-		 ConsoleWrite($t & ' of ' & $CmdLine[0] & ': ' & $title & @CRLF)
-		 _GenerateBanner($title)
+		 _LogMessage($t & ' of ' & $CmdLine[0] & ': ' & $title)
+		 GenerateBanner($title)
 	  Next
    EndIf
 EndIf
 
-Func _GenerateBanner($title)
+Func GenerateBanner($title)
    ;; Read ROM info
    Local $short = _InfoGet($title, 'short')
    Local $long = _InfoGet($title, 'long')
@@ -44,19 +41,19 @@ Func _GenerateBanner($title)
 	  EndIf
    EndIf
    If StringLen($release) == 0 Then
-	  ConsoleWrite('WARNING: Missing release' & @CRLF)
+	  _LogWarning('Missing release')
    EndIf
 
    Local $fLabel = _FileExistsArr('label.png|label.jpg|label.jpeg', _GetInput($title))
    If Not $fLabel Then
-	  _Error('ERROR: Label image not found')
+	  _LogError('Label image not found')
 	  SetError(-1)
 	  Return
    EndIf
 
    Local $fBanner = _FileExistsArr('banner.png|banner.jpg|banner.jpeg', _GetInput($title))
    If Not $fBanner Then
-	  _Error('ERROR: Banner image not found')
+	  _LogError('Banner image not found')
 	  SetError(-1)
 	  Return
    EndIf
@@ -255,4 +252,3 @@ Func _GenerateBanner($title)
    FileDelete(_GetOutput($title) & 'banner\*')
    DirRemove(_GetOutput($title) & 'banner')
 EndFunc
-

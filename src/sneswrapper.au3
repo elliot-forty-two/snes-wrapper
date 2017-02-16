@@ -1,27 +1,28 @@
 
 #include <File.au3>
 #include 'lib/GetOpt.au3'
+#include 'options.au3'
 #include 'functions.au3'
 #include 'banner.au3'
 
 If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then
    ConsoleWrite("SNES Wrapper - SNES VC for Old 3DS" & @CRLF & @CRLF)
-   _ParseOpts()
+   ParseOpts()
 
    $optFolder = _PathFull($optFolder)
    If Not FileExists($optFolder) Then
-	  _Error('ERROR: Folder not found: ' & $optFolder & @CRLF)
+	  _LogError('Folder not found: ' & $optFolder)
 	  Exit 1
    EndIf
-   ConsoleWrite('Using folder: ' & $optFolder & @CRLF)
+   _LogMessage('Using folder: ' & $optFolder)
 
    If $optUpdate Then
-	  ConsoleWrite('Updating CIAs' & @CRLF)
-	  $cias = _FileListToArray(_GetCiaDir(), '*.cia', $FLTA_FILES)
+	  _LogMessage('Updating CIAs')
+	  $cias = _FileListToArray(_GetCiaOutput(), '*.cia', $FLTA_FILES)
 	  If @error == 0 Then
 		 For $c = 1 To $cias[0]
 			$cia = $cias[$c]
-			ConsoleWrite($c & " of " & $cias[0] & ": " & $cia & @CRLF)
+			_LogMessage($c & " of " & $cias[0] & ": " & $cia)
 			UpdateCIA($cia)
 		 Next
 	  EndIf
@@ -30,66 +31,12 @@ If @ScriptName == 'sneswrapper.au3' Or @ScriptName == 'sneswrapper.exe' Then
 	  If @error == 0 Then
 		 For $t = 1 To $titles[0]
 			$title = $titles[$t]
-			ConsoleWrite($t & " of " & $titles[0] & ": " & $title & @CRLF)
+			_LogMessage($t & " of " & $titles[0] & ": " & $title)
 			ProcessTitle($title)
 		 Next
 	  EndIf
    EndIf
 EndIf
-
-Func _ParseOpts()
-   Local $sMsg
-   Local $sOpt, $sOper
-   Local $aOpts[5][3] = [ _
-	  ['-c', '--clean', True], _
-	  ['-u', '--update', True], _
-	  ['-b', '--blarg', True], _
-	  ['-v', '--verbose', True], _
-	  ['-h', '--help', True] _
-   ]
-   _GetOpt_Set($aOpts)
-   If 0 < $GetOpt_Opts[0] Then
-	  While 1
-		 $sOpt = _GetOpt('cuvbh')
-		 If Not $sOpt Then ExitLoop
-		 Switch $sOpt
-		 Case '?'
-			ConsoleWrite('Unknown option ' & $GetOpt_Opt & @CRLF & @CRLF)
-			_Help()
-		 Case ':' ; Options with missing required arguments come here. @extended is set to $E_GETOPT_MISSING_ARGUMENT
-		 Case 'c'
-			$optClean = $GetOpt_Arg
-		 Case 'u'
-			$optUpdate = $GetOpt_Arg
-		 Case 'v'
-			$optVerbose = $GetOpt_Arg
-		 Case 'b'
-			If $GetOpt_Arg Then
-			   $optEmulator = "blargSnes.elf"
-			EndIf
-		 Case 'h'
-			_Help()
-		 EndSwitch
-	  WEnd
-   EndIf
-   If 0 < $GetOpt_Opers[0] Then
-	  While 1
-		 $sOper = _GetOpt_Oper()
-		 If Not $sOper Then ExitLoop
-		 $optFolder = $sOper
-	  WEnd
-   EndIf
-EndFunc
-
-Func _Help()
-   ConsoleWrite('Usage: ' & @ScriptName & ' [-h] [-c|-u] [-b] [<folder>]' & @CRLF)
-   ConsoleWrite(@TAB & '-h --help' & @TAB & 'Show this help message' & @CRLF)
-   ConsoleWrite(@TAB & '-c --clean' & @TAB & 'Recreate output' & @CRLF)
-   ConsoleWrite(@TAB & '-u --update' & @TAB & 'Update existing CIAs with new emulator' & @CRLF)
-   ConsoleWrite(@TAB & '-b --blarg' & @TAB & 'Inject blargSNES instead of snes9x' & @CRLF)
-   ConsoleWrite(@TAB & '<folder>' & @TAB & 'Set the working folder where "input" folder resides' & @CRLF)
-   Exit
-EndFunc
 
 Func ProcessTitle($title)
    ;; Read ROM info
@@ -109,7 +56,7 @@ Func ProcessTitle($title)
 	  EndIf
    Next
    If Not FileExists(_GetInput($title) & $file) Then
-	  _Error('ERROR: Missing rom file. Make sure you have a rom file in ' & _GetInput($title))
+	  _LogError('Missing rom file. Make sure you have a rom file in ' & _GetInput($title))
 	  SetError(-1)
 	  Return
    EndIf
@@ -118,7 +65,7 @@ Func ProcessTitle($title)
 
    If $optClean Or Not FileExists(_GetOutput($title) & 'icon.bin') Then
 	  _LogProgress('Creating icon.bin ...')
-	  _CreateIcon($title, $short, $long, $author)
+	  CreateIcon($title, $short, $long, $author)
 	  If @error <> 0 Then
 		 SetError(-1)
 		 Return
@@ -128,7 +75,7 @@ Func ProcessTitle($title)
 
    If $optClean Or Not FileExists(_GetOutput($title) & 'banner.bin') Then
 	  _LogProgress('Creating banner.bin ...')
-	  _GenerateBanner($title)
+	  GenerateBanner($title)
 	  If @error <> 0 Then
 		 SetError(-1)
 		 Return
@@ -136,14 +83,14 @@ Func ProcessTitle($title)
 	  $cleanCia = True
    EndIf
 
-   If $optClean Or $cleanCia Or Not FileExists(_GetCiaDir() & $title & '.cia') Then
+   If $optClean Or $cleanCia Or Not FileExists(_GetCiaOutput() & $title & '.cia') Then
 	  _LogProgress('Creating CIA ...')
-	  DirCreate(_GetCiaDir())
+	  DirCreate(_GetCiaOutput())
 
-	  _CreateRomfs($title, $long)
+	  CreateRomfs($title, $long)
 
 	  _RunWait('tools\makerom -f cia -target t -rsf "template\custom.rsf" ' _
-		 & '-o "' & _GetCiaDir() & $title & '.cia" -exefslogo ' _
+		 & '-o "' & _GetCiaOutput() & $title & '.cia" -exefslogo ' _
 		 & '-icon "' & _GetOutput($title) & 'icon.bin" ' _
 		 & '-banner "' & _GetOutput($title) & 'banner.bin" ' _
 		 & '-elf "template\' & $optEmulator & '" ' _
@@ -159,7 +106,7 @@ Func ProcessTitle($title)
    _LogProgress('Done')
 EndFunc
 
-Func _CreateRomfs($title, $long)
+Func CreateRomfs($title, $long)
    DirCreate(_GetOutput($title) & "romfs")
 
    FileCopy(_GetInput($title) & "*.smc", _GetOutput($title) & "romfs\rom.smc")
@@ -174,12 +121,12 @@ Func _CreateRomfs($title, $long)
    FileWrite(_GetOutput($title) & "romfs\rom.txt", $long)
 EndFunc
 
-Func _CreateIcon($title, $short, $long, $author)
+Func CreateIcon($title, $short, $long, $author)
    DirCreate(_GetOutput($title))
 
    Local $file = _FileExistsArr('icon.png|icon.jpg|icon.jpeg|banner.png|banner.jpg|banner.jpeg', _GetInput($title))
    If Not $file Then
-	  _Error('ERROR: Icon image not found')
+	  _LogError('Icon image not found')
 	  SetError(-1)
 	  Return
    EndIf
@@ -193,23 +140,23 @@ EndFunc
 
 Func UpdateCIA($cia)
    _LogProgress('Extracting NCCH ...')
-   _RunWait('tools\ctrtool -x -t cia --contents ncch "' & $cia & '"', _GetCiaDir())
-   $ncchs = _FileListToArray(_GetCiaDir(), 'ncch*.*', $FLTA_FILES)
+   _RunWait('tools\ctrtool -x -t cia --contents ncch "' & $cia & '"', _GetCiaOutput())
+   $ncchs = _FileListToArray(_GetCiaOutput(), 'ncch*.*', $FLTA_FILES)
    If @error == 0 Then
 	  For $i = 1 To $ncchs[0]
 		 $ncch = $ncchs[$i]
 		 _LogProgress('Extracting exefs ' & $i & ' ...')
-		 _RunWait('tools\ctrtool -x -t ncch --exefsdir exefs --romfsdir romfs "' & $ncch & '"', _GetCiaDir())
-		 FileDelete(_GetCiaDir() & $ncch)
+		 _RunWait('tools\ctrtool -x -t ncch --exefsdir exefs --romfsdir romfs "' & $ncch & '"', _GetCiaOutput())
+		 FileDelete(_GetCiaOutput() & $ncch)
 	  Next
    EndIf
 
    _LogProgress('Extracting info ...')
-   _RunWait('tools\ciainfo "' & $cia & '"', _GetCiaDir())
-   $arr = FileReadToArray(_GetCiaDir() & 'info.txt')
-   FileDelete(_GetCiaDir() & 'info.txt')
+   _RunWait('tools\ciainfo "' & $cia & '"', _GetCiaOutput())
+   $arr = FileReadToArray(_GetCiaOutput() & 'info.txt')
+   FileDelete(_GetCiaOutput() & 'info.txt')
    If UBound($arr) <> 5 Then
-	  _Error('ERROR: CIA info returned wrong number of values')
+	  _LogError('CIA info returned wrong number of values')
 	  Return
    EndIf
    $id = $arr[0]
@@ -222,20 +169,74 @@ Func UpdateCIA($cia)
    _RunWait('tools\makerom ' _
 	  & '-f cia -target t ' _
 	  & '-rsf "template\custom.rsf" ' _
-	  & '-o "' & _GetCiaDir() & $cia & '" ' _
+	  & '-o "' & _GetCiaOutput() & $cia & '" ' _
 	  & '-exefslogo ' _
-	  & '-icon "' & _GetCiaDir() & 'exefs\icon.bin" ' _
-	  & '-banner "' & _GetCiaDir() & 'exefs\banner.bin" ' _
+	  & '-icon "' & _GetCiaOutput() & 'exefs\icon.bin" ' _
+	  & '-banner "' & _GetCiaOutput() & 'exefs\banner.bin" ' _
 	  & '-elf "template\' & $optEmulator & '" ' _
 	  & '-DAPP_TITLE="' & $title & '" ' _
 	  & '-DAPP_PRODUCT_CODE="' & $serial & '" ' _
 	  & '-DAPP_UNIQUE_ID=0x' & $id & ' ' _
-	  & '-DAPP_ROMFS="' & _GetCiaDir() & 'romfs"')
+	  & '-DAPP_ROMFS="' & _GetCiaOutput() & 'romfs"')
 
-   FileDelete(_GetCiaDir() & 'exefs\*')
-   DirRemove(_GetCiaDir() & 'exefs')
-   FileDelete(_GetCiaDir() & 'romfs\*')
-   DirRemove(_GetCiaDir() & 'romfs')
+   FileDelete(_GetCiaOutput() & 'exefs\*')
+   DirRemove(_GetCiaOutput() & 'exefs')
+   FileDelete(_GetCiaOutput() & 'romfs\*')
+   DirRemove(_GetCiaOutput() & 'romfs')
 
    _LogProgress('Done')
+EndFunc
+
+Func ParseOpts()
+   Local $sMsg
+   Local $sOpt, $sOper
+   Local $aOpts[5][3] = [ _
+	  ['-c', '--clean', True], _
+	  ['-u', '--update', True], _
+	  ['-b', '--blarg', True], _
+	  ['-v', '--verbose', True], _
+	  ['-h', '--help', True] _
+   ]
+   _GetOpt_Set($aOpts)
+   If 0 < $GetOpt_Opts[0] Then
+	  While 1
+		 $sOpt = _GetOpt('cuvbh')
+		 If Not $sOpt Then ExitLoop
+		 Switch $sOpt
+		 Case '?'
+			_LogError('Unknown option ' & $GetOpt_Opt & @CRLF)
+			Help()
+		 Case ':' ; Options with missing required arguments come here. @extended is set to $E_GETOPT_MISSING_ARGUMENT
+		 Case 'c'
+			$optClean = $GetOpt_Arg
+		 Case 'u'
+			$optUpdate = $GetOpt_Arg
+		 Case 'v'
+			$optVerbose = $GetOpt_Arg
+		 Case 'b'
+			If $GetOpt_Arg Then
+			   $optEmulator = "blargSnes.elf"
+			EndIf
+		 Case 'h'
+			Help()
+		 EndSwitch
+	  WEnd
+   EndIf
+   If 0 < $GetOpt_Opers[0] Then
+	  While 1
+		 $sOper = _GetOpt_Oper()
+		 If Not $sOper Then ExitLoop
+		 $optFolder = $sOper
+	  WEnd
+   EndIf
+EndFunc
+
+Func Help()
+   _LogMessage('Usage: ' & @ScriptName & ' [-h] [-c|-u] [-b] [<folder>]')
+   _LogMessage(@TAB & '-h --help' & @TAB & 'Show this help message')
+   _LogMessage(@TAB & '-c --clean' & @TAB & 'Recreate output')
+   _LogMessage(@TAB & '-u --update' & @TAB & 'Update existing CIAs with new emulator')
+   _LogMessage(@TAB & '-b --blarg' & @TAB & 'Inject blargSNES instead of snes9x')
+   _LogMessage(@TAB & '<folder>' & @TAB & 'Set the working folder where "input" folder resides')
+   Exit
 EndFunc

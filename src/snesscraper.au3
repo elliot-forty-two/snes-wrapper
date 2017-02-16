@@ -1,7 +1,4 @@
 
-#include <Constants.au3>
-#include <String.au3>
-#include <Math.au3>
 #include <File.au3>
 #include 'lib/GetOpt.au3'
 #include 'lib/Json.au3'
@@ -9,24 +6,25 @@
 #include 'lib/Request.au3'
 #include 'lib/LibCsv2.au3'
 #include 'lib/_XMLDomWrapper.au3'
+#include 'options.au3'
 #include 'functions.au3'
 
-Global $dataDir = 'game-data\'
-Global $datomaticCsv = $dataDir & 'datomatic.csv'
-Global $hashesCsv = $dataDir & 'thegamesdb-hashes.csv'
-
 If @ScriptName == 'snesscraper.au3' Or @ScriptName == 'snesscraper.exe' Then
-   ConsoleWrite("SNES Scraper - SNES VC for Old 3DS" & @CRLF & @CRLF)
-   _ParseOpts()
+   Global $dataDir = 'game-data\'
+   Global $datomaticCsv = $dataDir & 'datomatic.csv'
+   Global $hashesCsv = $dataDir & 'thegamesdb-hashes.csv'
+
+   _LogMessage("SNES Scraper - SNES VC for Old 3DS" & @CRLF)
+   ParseOpts()
 
    If Not FileExists(_GetInput()) Then
-	  _Error('ERROR: Folder not found: ' & _GetInput() & @CRLF)
+	  _LogError('Folder not found: ' & _GetInput())
 	  Exit 1
    EndIf
 
    UpdateGameData()
 
-   ConsoleWrite('Clean ROMs' & @CRLF)
+   _LogMessage('Clean ROMs')
    _RunWait('tools\nsrt.exe -savetype uncompressed -remhead -rename -lowext -noext "*"', _GetInput())
 
    ImportROMs()
@@ -64,7 +62,7 @@ Func GetSerial($crc32, $region = 'USA')
 EndFunc
 
 Func ImportROMs()
-   ConsoleWrite('Import ROMs' & @CRLF)
+   _LogMessage('Import ROMs')
 
    Local $file
    $files = _FileListToArray(_GetInput(), '*.s?c', $FLTA_FILES)
@@ -89,7 +87,7 @@ Func ImportROMs()
    $titles = _FileListToArray(_GetInput(), '*', $FLTA_FOLDERS)
    For $t = 1 To $titles[0]
 	  $title = $titles[$t]
-	  ConsoleWrite($t & ' of ' & $titles[0] & ': ' & $title & @CRLF)
+	  _LogMessage($t & ' of ' & $titles[0] & ': ' & $title)
 	  ImportROM($title)
    Next
 EndFunc
@@ -152,7 +150,7 @@ Func GetGameImages($title, $crc32, $sha1)
 		 FileDelete(_GetInput($title) & 'label' & $ext)
 		 FileWrite(_GetInput($title) & 'label' & $ext, $labelData)
 	  Else
-		 ConsoleWriteError('ERROR: No logo found' & @CRLF)
+		 _LogError('No logo found')
 	  EndIf
    EndIf
 
@@ -242,22 +240,22 @@ Func ImportROM($title)
 	  EndIf
 
 	  If StringLen($short) <= 32 Then
-		 ConsoleWrite('Short name: ' & $short & @CRLF)
+		 _LogMessage('Short name: ' & $short)
 	  EndIf
    EndIf
    If StringLen($short) > 32 Then
 	  $short = StringLeft($short, 31) & '…'
-	  ConsoleWrite('Short name: ' & $short & @CRLF)
+	  _LogMessage('Short name: ' & $short)
    EndIf
 
    Local $long = $name
    If StringLen($long) > 64 Then
-	  ConsoleWrite('WARNING: Long name > 64 chars' & @CRLF)
+	  _LogWarning('Long name > 64 chars')
    EndIf
 
    $serial = GetSerial($crc32, $region)
    If $serial == $crc32 Then
-	  ConsoleWrite('WARNING: Media serial not found' & @CRLF)
+	  _LogWarning('Media serial not found')
    EndIf
 
    ;; Game images
@@ -276,10 +274,10 @@ Func ImportROM($title)
    FileWriteLine($info,'id=' & $crc32)
    FileWriteLine($info,'serial=' & $serial)
 
-_LogProgress('Done')
+   _LogProgress('Done')
 EndFunc
 
-Func _ParseOpts()
+Func ParseOpts()
    Local $sMsg
    Local $sOpt, $sOper
    Local $aOpts[5][3] = [ _
@@ -294,15 +292,15 @@ Func _ParseOpts()
 		 If Not $sOpt Then ExitLoop
 		 Switch $sOpt
 		 Case '?'
-			ConsoleWrite('Unknown option ' & $GetOpt_Opt & @CRLF & @CRLF)
-			_Help()
+			_LogMessage('Unknown option ' & $GetOpt_Opt & @CRLF)
+			Help()
 		 Case ':' ; Options with missing required arguments come here. @extended is set to $E_GETOPT_MISSING_ARGUMENT
 		 Case 'c'
 			$optClean = $GetOpt_Arg
 		 Case 'v'
 			$optVerbose = $GetOpt_Arg
 		 Case 'h'
-			_Help()
+			Help()
 		 EndSwitch
 	  WEnd
    EndIf
@@ -315,10 +313,10 @@ Func _ParseOpts()
    EndIf
 EndFunc
 
-Func _Help()
-   ConsoleWrite('Usage: ' & @ScriptName & ' [-h] [-c] [<folder>]' & @CRLF)
-   ConsoleWrite(@TAB & '-h --help' & @TAB & 'Show this help message' & @CRLF)
-   ConsoleWrite(@TAB & '-c --clean' & @TAB & 'Recreate output' & @CRLF)
-   ConsoleWrite(@TAB & '<folder>' & @TAB & 'Set the working folder where "input" folder resides' & @CRLF)
+Func Help()
+   _LogMessage('Usage: ' & @ScriptName & ' [-h] [-c] [<folder>]')
+   _LogMessage(@TAB & '-h --help' & @TAB & 'Show this help message')
+   _LogMessage(@TAB & '-c --clean' & @TAB & 'Recreate output')
+   _LogMessage(@TAB & '<folder>' & @TAB & 'Set the working folder where "input" folder resides')
    Exit
 EndFunc
