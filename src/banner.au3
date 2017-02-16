@@ -33,16 +33,19 @@ Func GenerateBanner($title)
    Local $serial = _GetInfoValue($title, 'serial')
    Local $id = _GetInfoValue($title, 'id')
    Local $release = _GetInfoValue($title, 'release')
-
-   Local $vc
-   If StringLen($long) <> 0 Then
-	  $vc = $long
-	  If Not StringInStr($vc, '\n') Then
-		 $vc = StringReplace($vc, ': ', ':\n', -1)
-	  EndIf
+   If Not $short Or Not $long Or Not $author Or Not $serial Or Not $id Then
+	  _LogError('Game info not found')
+	  Return SetError(-1)
    EndIf
+
+   Local $vcTitle = $long
+   If Not StringInStr($vcTitle, '\n') Then
+	  $vcTitle = StringReplace($vcTitle, ': ', ':\n', -1)
+   EndIf
+
+   Local $vcRelease = 'Released: ' & $release
    If StringLen($release) == 0 Then
-	  _LogWarning('Release year not found')
+	  $vcRelease = 'Not Released.'
    EndIf
 
    Local $files = ['label.png', 'label.jpg', 'label.jpeg']
@@ -66,28 +69,33 @@ Func GenerateBanner($title)
    DirCreate(_GetOutput($title))
 
    ;; Process label, ETC1
-   _RunWait('tools\convert "' & $fLabel & '" -rotate 270 -resize 23x44! "' & _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert ' & $resourceDir & 'USA_EN3.png "' &  _GetOutput($title) & 'temp.png" -geometry +122+205 -composite -flip "' &  _GetOutput($title) & 'USA_EN3.png"')
+   _RunWait('tools\convert "' & $resourceDir & 'USA_EN3.png" ' _
+	  & '-fill #1e1e1e -draw "rectangle 122,205 145,249" ' _
+	  & '( "' & $fLabel & '" -rotate 270 -resize 23x44! ) -geometry +122+205 -composite ' _
+	  & '-flip "' &  _GetOutput($title) & 'USA_EN3.png"')
    _RunWait('tools\3dstex -r -o auto-etc1 "' &  _GetOutput($title) & 'USA_EN3.png" "' &  _GetOutput($title) & 'USA_EN3.bin"')
 
-   _RunWait('tools\convert "' & $fLabel & '" -resize 54x18! "' &  _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert ' & $resourceDir & 'EUR_EN3.png "' &  _GetOutput($title) & 'temp.png" -geometry +198+227 -composite -flip "' &  _GetOutput($title) & 'EUR_EN3.png"')
+   _RunWait('tools\convert "' & $resourceDir & 'EUR_EN3.png" ' _
+	  & '-fill #1e1e1e -draw "rectangle 198,227 252,245" ' _
+	  & '( "' & $fLabel & '" -resize 54x18! ) -geometry +198+227 -composite ' _
+	  & '-flip "' &  _GetOutput($title) & 'EUR_EN3.png"')
    _RunWait('tools\3dstex -r -o auto-etc1 "' &  _GetOutput($title) & 'EUR_EN3.png" "' &  _GetOutput($title) & 'EUR_EN3.bin"')
 
    ;; Process banner, 32-bit ARGB
-   _RunWait('tools\convert "' & $fBanner & '" -resize 120x102! "' &  _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert ' & $resourceDir & 'COMMON1.png "' &  _GetOutput($title) & 'temp.png" -geometry +4+6 -composite -flip "' &  _GetOutput($title) & 'common1.png"')
+   _RunWait('tools\convert -size 128x128 canvas:#fff0 ' _
+	  & '( "' &  $fBanner & '" -resize 120x102! ) -geometry +4+6 -compose over -composite ' _
+	  & '-flip "' &  _GetOutput($title) & 'common1.png"')
    _RunWait('tools\3dstex -r -o rgba8 "' &  _GetOutput($title) & 'common1.png" "' &  _GetOutput($title) & 'common1.bin"')
 
-   _RunWait('tools\convert "' & $fBanner & '" -resize 60x51! "' &  _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert ' & $resourceDir & 'COMMON1_2.png "' &  _GetOutput($title) & 'temp.png" -geometry +2+3 -composite -flip "' &  _GetOutput($title) & 'common1_2.png"')
+   _RunWait('tools\convert -size 64x64 canvas:#fff0 ' _
+	  & '( "' & $fBanner & '" -resize 60x51! ) -geometry +2+3 -composite ' _
+	  & '-flip "' &  _GetOutput($title) & 'common1_2.png"')
    _RunWait('tools\3dstex -r -o rgba8 "' &  _GetOutput($title) & 'common1_2.png" "' &  _GetOutput($title) & 'common1_2.bin"')
 
-   _RunWait('tools\convert "' & $fBanner & '" -resize 30x26! "' &  _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert ' & $resourceDir & 'COMMON1_3.png "' &  _GetOutput($title) & 'temp.png" -geometry +1+1 -composite -flip "' &  _GetOutput($title) & 'common1_3.png"')
+   _RunWait('tools\convert -size 32x32 canvas:#fff0 ' _
+	  & '( "' & $fBanner & '" -resize 30x26! ) -geometry +1+1 -composite ' _
+	  & '-flip "' &  _GetOutput($title) & 'common1_3.png"')
    _RunWait('tools\3dstex -r -o rgba8 "' &  _GetOutput($title) & 'common1_3.png" "' &  _GetOutput($title) & 'common1_3.bin"')
-
-   FileDelete(_GetOutput($title) & 'temp.png')
 
    ;; VC label
    $font = _PathFull($resourceDir & 'SCE-PS3-RD-B-LATIN.TTF')
@@ -95,8 +103,8 @@ Func GenerateBanner($title)
 	  $font = _PathFull($resourceDir & 'SCE-PS3-RD-R-LATIN.TTF')
    EndIf
    Local $fontSetup = ' -font "' & $font & '"' & ' -stretch Normal' & ' -background #0000' & ' -fill #1e1e1e'
-   Local $vcCaption = ' -gravity center' & ' -interline-spacing 1' & ' -size 159x' & ' caption:"' & $vc & '"'
-   Local $releaseCaption = ' -gravity center' & ' -kerning 1' & ' -size 159x' & ' caption:"Released: ' & $release & '"'
+   Local $vcCaption = ' -gravity center' & ' -interline-spacing 1' & ' -size 159x' & ' caption:"' & $vcTitle & '"'
+   Local $releaseCaption = ' -gravity center' & ' -kerning 1' & ' -size 159x' & ' caption:"' & $vcRelease & '"'
 
    ;; Calculate the best fit
    For $point = 16 To 12 Step -2

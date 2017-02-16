@@ -147,17 +147,19 @@ Func CreateIcon($title)
    EndIf
 
    Local $files = ['icon.png', 'icon.jpg', 'icon.jpeg', 'banner.png', 'banner.jpg', 'banner.jpeg']
-   Local $file = _FileExistsArr($files, _GetInput($title))
-   If Not $file Then
+   Local $fIcon = _FileExistsArr($files, _GetInput($title))
+   If Not $fIcon Then
 	  _LogError('Icon image not found')
 	  Return SetError(-1)
    EndIf
 
-   _RunWait('tools\convert "' & $file & '" -resize 40x40! "' & _GetOutput($title) & 'temp.png"')
-   _RunWait('tools\convert template\icon.png "' & _GetOutput($title) & 'temp.png" -gravity center -composite "' & _GetOutput($title) & 'icon.png"')
+   _RunWait('tools\convert ' _
+	  & '-size 48x48 ( gradient:#ffffff-#626262 ) ' _
+	  & '( -size 44x44 gradient:#626262-#c5c5c5 ) -gravity center -composite ' _
+	  & '( -size 40x40 canvas:#1e1e1e ) -gravity center -composite ' _
+	  & '( "' & $fIcon & '" -resize 40x40! ) -gravity center -composite ' _
+	  & '"' & _GetOutput($title) & 'icon.png"')
    _RunWait('tools\bannertool makesmdh -s "' & $short & '" -l "' & $long & '" -p "' & $author & '" -i "' & _GetOutput($title) & 'icon.png" -o "' & _GetOutput($title) & 'icon.bin"')
-
-   FileDelete(_GetOutput($title) & "temp.png")
 EndFunc
 
 Func UpdateCIA($cia)
