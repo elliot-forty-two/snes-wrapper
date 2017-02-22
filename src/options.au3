@@ -1,8 +1,13 @@
 
 #include-once
 
-Global $emuBlarg = "blargSnes.elf"
-Global $emuSnes9x = "snes9x_3ds.elf"
+Global $emuBlarg = 'blargSnes.elf'
+Global $emuSnes9x = 'snes9x_3ds.elf'
+
+Global $ssUserId = ''
+Global $ssPassword = ''
+Global $ssDevId = 'xxx'
+Global $ssDevPassword = 'yyy'
 
 Global $optClean = False
 Global $optUpdate = False

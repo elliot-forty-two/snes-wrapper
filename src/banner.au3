@@ -44,7 +44,7 @@ Func GenerateBanner($title)
    EndIf
 
    Local $vcRelease = 'Released: ' & $release
-   If StringLen($release) == 0 Then
+   If $release == 0 Or $release == '' Then
 	  $vcRelease = 'Not Released.'
    EndIf
 

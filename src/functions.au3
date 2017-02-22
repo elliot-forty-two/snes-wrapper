@@ -86,7 +86,7 @@ Func _GetInfoValue($title, $key)
    If UBound($arr) == 1 Then
 	  Return $arr[0]
    EndIf
-   Return ""
+   Return Null
 EndFunc
 
 Func _FileExistsArr($files, $dir = '')
@@ -102,9 +102,15 @@ Func _FileExistsArr($files, $dir = '')
    Return Null
 EndFunc
 
+Func _FileExists($sFilePath , $sFilter = "*", $iFlag = $FLTA_FILES)
+   _FileListToArray($sFilePath, $sFilter, $iFlag)
+   Return @error <> 0
+EndFunc
+
 Func _XMLGetFirstValue($xpath)
    Local $nodes = _XMLGetValue($xpath)
    If @error == 0 Then
 	  Return $nodes[1]
    EndIf
+   Return Null
 EndFunc

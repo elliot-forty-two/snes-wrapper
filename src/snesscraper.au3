@@ -3,18 +3,21 @@
 
 #include <File.au3>
 #include 'lib/GetOpt.au3'
-#include 'lib/Json.au3'
-#include 'lib/Curl.au3'
-#include 'lib/Request.au3'
 #include 'lib/LibCsv2.au3'
 #include 'lib/_XMLDomWrapper.au3'
+#include 'lib/WinHttp.au3'
+#include 'lib/CRC.au3'
+#include 'lib/MD5.au3'
+#include 'lib/SHA1.au3'
+#include 'ds/ss.au3'
+#include 'ds/tgdb.au3'
+#include 'ds/e42.au3'
 #include 'options.au3'
 #include 'functions.au3'
 
 If @ScriptName == 'snesscraper.au3' Or @ScriptName == 'snesscraper.exe' Then
    Global $dataDir = 'game-data\'
    Global $datomaticCsv = $dataDir & 'datomatic.csv'
-   Global $hashesCsv = $dataDir & 'thegamesdb-hashes.csv'
 
    _LogMessage("SNES Scraper - SNES VC for Old 3DS" & @CRLF)
    ParseOpts()
@@ -26,12 +29,6 @@ If @ScriptName == 'snesscraper.au3' Or @ScriptName == 'snesscraper.exe' Then
 
    UpdateGameData()
 
-   _FileListToArray(_GetInput(), '*', $FLTA_FILES)
-   If @error == 0 Then
-	  _LogMessage('Cleaning files')
-	  _RunWait('tools\nsrt.exe -savetype uncompressed -remhead -rename -lowext -noext "*"', _GetInput())
-   EndIf
-
    ScrapeFiles()
 EndIf
 
@@ -39,31 +36,63 @@ Func UpdateGameData()
    DirCreate($dataDir)
 
    If Not FileExists($datomaticCsv) Then
-	  Local $data = Request('https://github.com/elliot-forty-two/game-data/raw/master/snes/datomatic.csv')
+	  Local $data = HttpGet('https://github.com/elliot-forty-two/game-data/raw/master/snes/datomatic.csv')
 	  FileWrite($datomaticCsv, $data)
-   EndIf
-
-   If Not FileExists($hashesCsv) Then
-	  Local $data = Request('https://github.com/elliot-forty-two/game-data/raw/master/snes/thegamesdb-hashes.csv')
-	  FileWrite($hashesCsv, $data)
    EndIf
 EndFunc
 
 Func GetGameSerial($crc32, $region = 'USA')
-   Local $serial = $crc32
-
+   UpdateGameData()
+   Local $serial = Null
    If FileExists($datomaticCsv) Then
 	  Local $csv = _CSVReadFile($datomaticCsv)
 	  For $i=1 To UBound($csv) - 1
-		 If $crc32 == $csv[$i][6] Then
+		 If StringLower($crc32) == StringLower($csv[$i][6]) Then
 			$serial = $csv[$i][1]
-			If  $region == $csv[$i][2] And Not StringLower($serial) == 'unk' Then
+			If StringLower($region) == StringLower($csv[$i][2]) And Not StringLower($serial) == 'unk' Then
 			   Return $serial
 			EndIf
 		 EndIf
 	  Next
    EndIf
    Return $serial
+EndFunc
+
+Func CreateSerialFromCode($code, $country, $video)
+   Switch $country
+   Case "USA"
+	  Return 'SNS-' & $code & '-USA'
+   Case "Japan"
+	  Return 'SHVC-' & $code
+   Case "Germ/Aust/Switz"
+	  Return 'SNSP-' & $code & '-FRG'
+   Case "Euro/Asia/Oceania"
+	  Return 'SNSP-' & $code & '-EUR'
+   Case "France"
+	  Return 'SNSP-' & $code & '-FRA'
+   Case "Italy"
+	  Return 'SNSP-' & $code & '-ITA'
+   Case "Spain"
+	  Return 'SNSP-' & $code & '-ESP'
+   Case "Sweden"
+   Case "Finland"
+	  Return 'SNSP-' & $code & '-SCN'
+   Case "The Netherlands"
+	  Return 'SNSP-' & $code & '-HOL'
+   Case "South Korea"
+	  Return 'SNSP-' & $code & '-KOR'
+   Case "Honk Kong/China"
+	  Return 'SNSP-' & $code & '-HKV'
+   Case "Unknown"
+   Case Else
+	  Switch $video
+	  Case 'NTSC'
+		 Return 'SNS-' & $code
+	  Case 'PAL'
+		 Return 'SNSP-' & $code
+	  EndSwitch
+   EndSwitch
+   Return Null
 EndFunc
 
 Func ScrapeFiles()
@@ -90,6 +119,21 @@ Func ScrapeFiles()
    EndIf
 
    $titles = _FileListToArrayRec(_GetInput(), '*', $FLTAR_FOLDERS, $FLTAR_NORECUR, $FLTAR_SORT, $FLTAR_NOPATH)
+
+   If $optClean Then
+	  For $t = 1 To $titles[0]
+		 $title = StringReplace($titles[$t], '\', '')
+		 _LogProgress('Cleaning: ' & $title)
+		 FileDelete(_GetInput($title) & 'info.txt')
+		 FileDelete(_GetInput($title) & 'rominfo.xml')
+		 FileDelete(_GetInput($title) & 'ssinfo.xml')
+		 FileDelete(_GetInput($title) & 'tgdbinfo.xml')
+		 FileDelete(_GetInput($title) & 'label.*')
+		 FileDelete(_GetInput($title) & 'banner.*')
+		 FileDelete(_GetInput($title) & 'icon.*')
+	  Next
+   EndIf
+
    For $t = 1 To $titles[0]
 	  $title = StringReplace($titles[$t], '\', '')
 	  _LogVerbose('')
@@ -98,108 +142,10 @@ Func ScrapeFiles()
    Next
 EndFunc
 
-Func OpenInfoXml($title, $sha1)
-   If Not FileExists(_GetInput($title) & 'info.xml') Then
-	  _LogProgress('Get info.xml ...')
-	  Local $csv = _CSVReadFile($hashesCsv)
-	  Local $gameId
-	  For $i=1 To UBound($csv) - 1
-		 If $sha1 == $csv[$i][0] Then
-			$gameId =  $csv[$i][1]
-		 EndIf
-	  Next
-	  Local $url = 'http://thegamesdb.net/api/GetGame.php?id=' & $gameId
-	  _LogVerbose('Request: ' & $url)
-	  Local $xmlData = Request($url)
-	  FileDelete(_GetInput($title) & 'info.xml')
-	  FileWrite(_GetInput($title) & 'info.xml', $xmlData)
-   EndIf
-
-   Return _XMLFileOpen(_GetInput($title) & 'info.xml')
-EndFunc
-
-Func GetGameImages($title, $crc32, $sha1)
-   DirCreate(_GetInput($title))
-   OpenInfoXml($title, $sha1)
-
-   _FileListToArray(_GetInput($title), 'label.*', $FLTA_FILES)
-   If @error <> 0 Then
-	  _LogProgress('Get label image ...')
-	  Local $baseImgUrl, $logoSrc, $bannerSrc, $boxartSrc
-	  Local $nodes = _XMLGetValue('//baseImgUrl')
-	  If @error == 0 Then
-		 $baseImgUrl = $nodes[1]
-	  EndIf
-	  Local $nodes = _XMLGetValue('//clearlogo')
-	  If @error == 0 Then
-		 $logoSrc = $nodes[1]
-	  EndIf
-	  Local $nodes = _XMLGetValue('//banner')
-	  If @error == 0 Then
-		 $bannerSrc = $nodes[1]
-	  EndIf
-	  Local $nodes = _XMLGetValue('//boxart[@side="front"]')
-	  If @error == 0 Then
-		 $boxartSrc = $nodes[1]
-	  EndIf
-
-	  If $baseImgUrl And ($logoSrc Or $bannerSrc Or $boxartSrc) Then
-		 Local $src
-		 If $logoSrc Then
-			$src = $logoSrc
-		 ElseIf $bannerSrc Then
-			$src = $bannerSrc
-		 ElseIf $boxartSrc Then
-			$src = $boxartSrc
-		 EndIf
-		 _LogVerbose('Request: ' & $baseImgUrl & $src)
-		 Local $labelData = Request($baseImgUrl & $src)
-		 Local $ext = StringRight($src, 4)
-		 FileDelete(_GetInput($title) & 'label' & $ext)
-		 FileWrite(_GetInput($title) & 'label' & $ext, $labelData)
-	  Else
-		 _LogError('Label image not found')
-	  EndIf
-   EndIf
-
-   _FileListToArray(_GetInput($title), 'banner.*', $FLTA_FILES)
-   Local $getBanner = @error <> 0
-   _FileListToArray(_GetInput($title), 'icon.*', $FLTA_FILES)
-   Local $getIcon = @error <> 0
-   If $getBanner Or $getIcon Then
-	  _LogProgress('Get title image ...')
-	  Local $url = 'https://raw.githubusercontent.com/elliot-forty-two/game-data/master/snes/title/' & $crc32 & '.png'
-	  _LogVerbose('Request: ' & $url)
-	  Local $titleData = Request($url)
-	  If $getBanner Then
-		 FileDelete(_GetInput($title) & 'banner.png')
-		 FileWrite(_GetInput($title) & 'banner.png', $titleData)
-	  EndIf
-	  If $getIcon Then
-		 FileDelete(_GetInput($title) & 'icon.png')
-		 FileWrite(_GetInput($title) & 'icon.png', $titleData)
-	  EndIf
-   EndIf
-EndFunc
-
-Func GetGameRelease($title, $sha1)
-   _LogProgress('Get release year ...')
-   OpenInfoXml($title, $sha1)
-   Return StringRight(_XMLGetFirstValue('//ReleaseDate'), 4)
-EndFunc
-
 Func ImportROM($title)
-   If $optClean Then
-	  FileDelete(_GetInput($title) & 'rominfo.xml')
-	  FileDelete(_GetInput($title) & 'info.xml')
-	  FileDelete(_GetInput($title) & 'label.*')
-	  FileDelete(_GetInput($title) & 'banner.*')
-	  FileDelete(_GetInput($title) & 'icon.*')
-   EndIf
-
    If Not FileExists(_GetInput($title) & 'rominfo.xml') Then
 	  _LogProgress('Get rominfo.xml ...')
-	  Local $xmlData = _RunWait('tools\nsrt.exe -hashes -infoxml "*.s?c"', _GetInput($title))
+	  Local $xmlData = _RunWait('tools\nsrt.exe -infoxml "*.s?c"', _GetInput($title))
 	  FileDelete(_GetInput($title) & 'rominfo.xml')
 	  FileWrite(_GetInput($title) & 'rominfo.xml', $xmlData)
    EndIf
@@ -208,12 +154,25 @@ Func ImportROM($title)
    $file = _XMLGetFirstValue('//File')
    $company = _XMLGetFirstValue('//Company')
    $region = _XMLGetFirstValue('//Country')
+   $video = _XMLGetFirstValue('//Video')
    $code =  StringStripWS(_XMLGetFirstValue('//GameCode'), $STR_STRIPLEADING + $STR_STRIPTRAILING)
-   $crc32 = _XMLGetFirstValue('//Section[@type="Hashes"]/CRC32')
-   $sha1 = StringLower(_XMLGetFirstValue('//Section[@type="Hashes"]/SHA-1'))
 
+   ;; Hashes
+   $filePath = _GetInput($title) & $file
+   $fileSize = FileGetSize($filePath)
+   $fHandle = FileOpen($filePath, $FO_BINARY)
+   If Mod($fileSize, 1024) <> 0 Then
+	  ;; Skip header
+	  FileSetPos($fHandle, 512, $FILE_BEGIN)
+   EndIf
+   $data = FileRead($fHandle)
+   $crc32 = Hex(_CRC32($data), 8)
+   $sha1 = StringTrimLeft(_SHA1($data), 2)
+   $md5 = StringTrimLeft(_MD5($data), 2)
+
+   ;; Name
    $name = _XMLGetFirstValue('//Section[@type="Database"]/Name')
-   If $name == 'Not found in Database' Then
+   If $name == '' Or $name == 0 Then
 	  $name = $title
    EndIf
 
@@ -261,16 +220,30 @@ Func ImportROM($title)
 	  _LogWarning('Long name greater than 64 characters')
    EndIf
 
-   $serial = GetGameSerial($crc32, $region)
-   If $serial == $crc32 Then
+   Local $serial = GetGameSerial($crc32, $region)
+   If Not $serial Then
+	  _LogMessage('Creating serial from game code')
+	  $serial = CreateSerialFromCode($code, $region, $video)
+   EndIf
+   If Not $serial Then
 	  _LogWarning('Media serial not found')
+	  $serial = $crc32
    EndIf
 
    ;; Game images
-   GetGameImages($title, $crc32, $sha1)
+   _SS_GetLabelImage($title, $crc32, $sha1, $md5, $file)
+   _TGDB_GetLabelImage($title, $crc32, $sha1)
+   _E42_GetTitleImage($title, $crc32, $sha1, $md5, $file)
+   _SS_GetTitleImage($title, $crc32, $sha1, $md5, $file)
 
    ;; Release year
-   $release = GetGameRelease($title, $sha1)
+   $release = _SS_GetGameRelease($title, $crc32, $sha1, $md5, $file)
+   If $release == '' Or $release == 0 Then
+	  $release = _TGDB_GetGameRelease($title, $sha1)
+   EndIf
+   If $release == '' Or $release == 0 Then
+	  _LogWarning('Release year not found')
+   EndIf
 
    ;; Write info.txt
    $info = _GetInput($title) & 'info.txt'
@@ -291,12 +264,14 @@ Func ParseOpts()
    Local $aOpts[5][3] = [ _
 	  ['-c', '--clean', True], _
 	  ['-v', '--verbose', True], _
+	  ['-u', '--userid', True], _
+	  ['-p', '--password', True], _
 	  ['-h', '--help', True] _
    ]
    _GetOpt_Set($aOpts)
    If 0 < $GetOpt_Opts[0] Then
 	  While 1
-		 $sOpt = _GetOpt('cvh')
+		 $sOpt = _GetOpt('cvu:p:h')
 		 If Not $sOpt Then ExitLoop
 		 Switch $sOpt
 		 Case '?'
@@ -307,6 +282,10 @@ Func ParseOpts()
 			$optClean = $GetOpt_Arg
 		 Case 'v'
 			$optVerbose = $GetOpt_Arg
+		 Case 'u'
+			$ssUserid = $GetOpt_Arg
+		 Case 'p'
+			$ssPassword = $GetOpt_Arg
 		 Case 'h'
 			Help()
 		 EndSwitch
@@ -322,10 +301,12 @@ Func ParseOpts()
 EndFunc
 
 Func Help()
-   _LogMessage('Usage: ' & @ScriptName & ' [-h] [-c] [<folder>]')
+   _LogMessage('Usage: ' & @ScriptName & ' [-h] [-c] [-v] [-u=<userid> -p=<password>] [<folder>]')
    _LogMessage(@TAB & '-h --help' & @TAB & 'Show this help message')
    _LogMessage(@TAB & '-c --clean' & @TAB & 'Recreate output')
    _LogMessage(@TAB & '-v --verbose' & @TAB & 'Verbose output')
+   _LogMessage(@TAB & '-u --userid' & @TAB & 'ScreenScraper userid')
+   _LogMessage(@TAB & '-p --password' & @TAB & 'ScreenScraper password')
    _LogMessage(@TAB & '<folder>' & @TAB & 'Set the working folder where "input" folder resides')
    Exit
 EndFunc

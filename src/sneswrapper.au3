@@ -256,7 +256,7 @@ Func ParseOpts()
 EndFunc
 
 Func Help()
-   _LogMessage('Usage: ' & @ScriptName & ' [-h] [-c|-u] [-b] [<folder>]')
+   _LogMessage('Usage: ' & @ScriptName & ' [-h] [-c|-u] [-b] [-v] [<folder>]')
    _LogMessage(@TAB & '-h --help' & @TAB & 'Show this help message')
    _LogMessage(@TAB & '-c --clean' & @TAB & 'Recreate output')
    _LogMessage(@TAB & '-u --update' & @TAB & 'Update existing CIAs with new emulator')
